@@ -1,0 +1,122 @@
+.dashboard-card {
+  transition: transform 0.2s;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.dashboard-card:hover {
+  transform: translateY(-5px);
+}
+
+.metric-icon {
+  background: rgba(13, 110, 253, 0.1);
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.progress {
+  background-color: rgba(0,0,0,0.05);
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  transition: width 0.6s ease;
+  text-align: center;
+  line-height: 20px;
+  white-space: nowrap;
+  padding: 0 10px;
+}
+
+.table-responsive {
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.table th {
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.platform-toggle .btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.platform-toggle .btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 10px;
+  border-radius: 8px !important;
+  margin: 0 !important;
+}
+
+.platform-toggle .btn:hover {
+  transform: translateY(-2px);
+  transition: transform 0.2s;
+}
+
+.badge {
+  padding: 8px 12px;
+  font-size: 0.9em;
+}
+
+.analytics-dashboard .metric-card {
+  transition: transform 0.2s ease-in-out;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.analytics-dashboard .metric-card:hover {
+  transform: translateY(-5px);
+}
+
+.analytics-dashboard h2 {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.analytics-dashboard .card {
+  border-radius: 10px;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.analytics-dashboard .card-body {
+  padding: 1.5rem;
+}
+
+.analytics-dashboard .text-primary {
+  color: #3498db !important;
+}
+
+.analytics-dashboard .text-muted {
+  color: #95a5a6 !important;
+}
+
+.hover-effect {
+  transition: transform 0.2s ease-in-out;
+}
+
+.hover-effect:hover {
+  transform: translateY(-5px);
+}
+
+.chart-legend {
+  font-size: 0.875rem;
+}
+
+.legend-color {
+  border-radius: 2px;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.legend-color:hover {
+  opacity: 0.8;
+}

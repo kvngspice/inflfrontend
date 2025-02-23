@@ -1,0 +1,99 @@
+.hover-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.hover-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.metric {
+  text-align: center;
+  padding: 8px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+}
+
+.metric small {
+  display: block;
+  color: #6c757d;
+  font-size: 0.75rem;
+}
+
+.metric strong {
+  display: block;
+  color: #212529;
+  font-size: 0.9rem;
+  margin-top: 2px;
+}
+
+.pagination {
+  gap: 5px;
+}
+
+.pagination .page-item .page-link {
+  border-radius: 4px;
+}
+
+.profile-modal {
+  max-width: 90vw;
+}
+
+.profile-modal .modal-body {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.influencer-profile .metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  text-align: center;
+}
+
+.influencer-profile .metric {
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.influencer-profile .metric small {
+  display: block;
+  color: #6c757d;
+}
+
+.influencer-profile .metric strong {
+  display: block;
+  font-size: 1.2rem;
+  margin-top: 0.5rem;
+}
+
+.social-links a {
+  transition: transform 0.2s, opacity 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background-color: #f8f9fa;
+}
+
+.social-links a:hover {
+  transform: translateY(-2px);
+  opacity: 0.8;
+}
+
+.social-links a svg {
+  transition: transform 0.2s;
+}
+
+.social-links a:hover svg {
+  transform: scale(1.1);
+} 

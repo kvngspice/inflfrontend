@@ -1,0 +1,25 @@
+echo # dependencies > .gitignore
+echo /node_modules >> .gitignore
+echo /.pnp >> .gitignore
+echo .pnp.js >> .gitignore
+echo # testing >> .gitignore
+echo /coverage >> .gitignore
+echo # production >> .gitignore
+echo /build >> .gitignore
+echo # cache files >> .gitignore
+echo .cache/ >> .gitignore
+echo *.cache >> .gitignore
+echo **/.cache >> .gitignore
+echo **/*.pack >> .gitignore
+echo **/*.pack.old >> .gitignore
+echo # misc >> .gitignore
+echo .DS_Store >> .gitignore
+echo .env >> .gitignore
+echo .env.local >> .gitignore
+echo .env.development.local >> .gitignore
+echo .env.test.local >> .gitignore
+echo .env.production.local >> .gitignore
+echo # logs >> .gitignore
+echo npm-debug.log* >> .gitignore
+echo yarn-debug.log* >> .gitignore
+echo yarn-error.log* >> .gitignore
