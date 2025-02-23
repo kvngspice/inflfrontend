@@ -51,7 +51,7 @@ const PaymentSection = () => {
 
       console.log('Fetching approved bookings...');  // Debug log
       
-      const response = await fetch('http://127.0.0.1:8000/api/bookings/approved-pending-payment/', {
+      const response = await fetch('${process.env.REACT_APP_API_URL}/api/bookings/approved-pending-payment/', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

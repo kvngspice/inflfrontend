@@ -9,7 +9,7 @@ function InfluencerDashboard() {
   }, []);
 
   const fetchBookings = async () => {
-    const response = await fetch("http://127.0.0.1:8000/api/influencers/bookings/");
+    const response = await fetch("${process.env.REACT_APP_API_URL}/api/influencers/bookings/");
     const data = await response.json();
     setBookings(data);
   };

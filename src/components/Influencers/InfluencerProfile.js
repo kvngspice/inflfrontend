@@ -14,7 +14,7 @@ const InfluencerProfile = ({ influencerId }) => {
   const fetchInfluencerProfile = async () => {
     try {
       console.log('Fetching profile for influencer:', influencerId);
-      const response = await fetch(`http://127.0.0.1:8000/api/influencers/${influencerId}/profile/`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/influencers/${influencerId}/profile/`);
       const data = await response.json();
       console.log('Profile data received:', data);
       console.log('Social media URLs:', {

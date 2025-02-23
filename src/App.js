@@ -381,7 +381,7 @@ function App() {
   }, []);
 
   const fetchCampaigns = () => {
-    fetch("http://127.0.0.1:8000/api/campaigns/")
+    fetch("${process.env.REACT_APP_API_URL}/api/campaigns/")
       .then((response) => response.json())
       .then((data) => setCampaigns(data))
       .catch((error) => console.error("Error fetching campaigns:", error));
@@ -390,7 +390,7 @@ function App() {
   const fetchInfluencers = async () => {
     try {
       setIsLoadingInfluencers(true);
-      const response = await fetch('http://127.0.0.1:8000/api/influencers/');
+      const response = await fetch('${process.env.REACT_APP_API_URL}/api/influencers/');
       if (!response.ok) {
         throw new Error('Failed to fetch influencers');
       }
@@ -411,7 +411,7 @@ function App() {
       // For now, using mock data
       // In production, uncomment the fetch call below
       /*
-      const response = await fetch(`http://127.0.0.1:8000/api/analytics/dashboard/${campaignId}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/analytics/dashboard/${campaignId}`, {
         headers: {
           "Authorization": `Bearer ${localStorage.getItem("token")}`
         }
@@ -472,7 +472,7 @@ function App() {
     }
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/bookings/", {
+      const response = await fetch("${process.env.REACT_APP_API_URL}/api/bookings/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -535,7 +535,7 @@ function App() {
     };
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/campaigns/", {
+      const response = await fetch("${process.env.REACT_APP_API_URL}/api/campaigns/", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -563,7 +563,7 @@ function App() {
         setMinFollowers('');
         
         // Fetch updated campaigns list
-        const campaignsResponse = await fetch("http://127.0.0.1:8000/api/campaigns/");
+        const campaignsResponse = await fetch("${process.env.REACT_APP_API_URL}/api/campaigns/");
         if (campaignsResponse.ok) {
           const campaignsData = await campaignsResponse.json();
           setCampaigns(campaignsData);
@@ -631,7 +631,7 @@ function App() {
   // Define searchInfluencers inside App component
   const searchInfluencers = async (campaignId) => {
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/campaigns/${campaignId}/match-influencers/`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/campaigns/${campaignId}/match-influencers/`, {
         headers: {
           "Authorization": `Bearer ${localStorage.getItem("token")}`
         }
