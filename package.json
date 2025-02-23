@@ -1,7 +1,7 @@
 {
   "name": "influencer-platform-frontend",
   "version": "1.0.0",
-  "description": "{\\rtf1}",
+  "description": "Influencer Platform Frontend",
   "main": "Postcss.config.js",
   "scripts": {
     "start": "react-scripts start",
@@ -19,7 +19,7 @@
     "axios": "^0.24.0",
     "bootstrap": "^5.3.3",
     "framer-motion": "^12.4.7",
-    "react": "^18.2.0",  // Added this
+    "react": "^18.2.0",
     "react-bootstrap": "^2.7.0",
     "react-dom": "^18.2.0",
     "react-icons": "^4.3.1",
