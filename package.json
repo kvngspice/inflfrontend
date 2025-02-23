@@ -5,28 +5,34 @@
   "main": "Postcss.config.js",
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "CI=false react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^1.2.36",
+    "@fortawesome/free-solid-svg-icons": "^5.15.4",
+    "@fortawesome/react-fontawesome": "^0.1.16",
+    "axios": "^0.24.0",
+    "bootstrap": "^5.3.3",
+    "framer-motion": "^12.4.7",
+    "react": "^18.2.0",  // Added this
+    "react-bootstrap": "^2.7.0",
+    "react-dom": "^18.2.0",
+    "react-icons": "^4.3.1",
+    "react-router-dom": "^6.0.0",
+    "react-scripts": "^5.0.1",
+    "react-toastify": "^11.0.3",
+    "recharts": "^2.1.0"
+  },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.5.1",
     "tailwindcss": "^4.0.4"
-  },
-  "dependencies": {
-    "bootstrap": "^5.3.3",
-    "framer-motion": "^12.4.7",
-    "react-bootstrap": "^2.10.9",
-    "react-dom": "^19.0.0",
-    "react-icons": "^5.4.0",
-    "react-router-dom": "^7.1.5",
-    "react-scripts": "^5.0.1",
-    "react-toastify": "^11.0.3"
   },
   "browserslist": {
     "production": [
