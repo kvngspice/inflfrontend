@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import config from './config';
 
 function LoginPage() {
   const [username, setUsername] = useState("");
@@ -9,7 +10,7 @@ function LoginPage() {
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    const response = await fetch("${process.env.REACT_APP_API_URL}/api/auth/login/", {
+    const response = await fetch(`${config.API_URL}/api/auth/login/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),

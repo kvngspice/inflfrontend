@@ -21,6 +21,7 @@ import Login from './components/Login';
 import DashboardLayout from './components/DashboardLayout';
 import CampaignList from './components/Campaigns/CampaignList';
 import PaymentSection from './components/PaymentSection';
+import config from './config';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
@@ -381,7 +382,7 @@ function App() {
   }, []);
 
   const fetchCampaigns = () => {
-    fetch("${process.env.REACT_APP_API_URL}/api/campaigns/")
+    fetch(`${config.API_URL}/api/campaigns/`)
       .then((response) => response.json())
       .then((data) => setCampaigns(data))
       .catch((error) => console.error("Error fetching campaigns:", error));
@@ -390,7 +391,7 @@ function App() {
   const fetchInfluencers = async () => {
     try {
       setIsLoadingInfluencers(true);
-      const response = await fetch('${process.env.REACT_APP_API_URL}/api/influencers/');
+      const response = await fetch(`${config.API_URL}/api/influencers/`);
       if (!response.ok) {
         throw new Error('Failed to fetch influencers');
       }
@@ -472,7 +473,7 @@ function App() {
     }
 
     try {
-      const response = await fetch("${process.env.REACT_APP_API_URL}/api/bookings/", {
+      const response = await fetch(`${config.API_URL}/api/bookings/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -535,7 +536,7 @@ function App() {
     };
 
     try {
-      const response = await fetch("${process.env.REACT_APP_API_URL}/api/campaigns/", {
+      const response = await fetch(`${config.API_URL}/api/campaigns/`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -563,7 +564,7 @@ function App() {
         setMinFollowers('');
         
         // Fetch updated campaigns list
-        const campaignsResponse = await fetch("${process.env.REACT_APP_API_URL}/api/campaigns/");
+        const campaignsResponse = await fetch(`${config.API_URL}/api/campaigns/`);
         if (campaignsResponse.ok) {
           const campaignsData = await campaignsResponse.json();
           setCampaigns(campaignsData);
@@ -631,100 +632,6 @@ function App() {
   // Define searchInfluencers inside App component
   const searchInfluencers = async (campaignId) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/campaigns/${campaignId}/match-influencers/`, {
+      const response = await fetch(`${config.API_URL}/api/campaigns/${campaignId}/match-influencers/`, {
         headers: {
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("Matched influencers data:", data);
-      setMatchedInfluencers(data);
-    } catch (error) {
-      console.error("Error fetching matched influencers:", error);
-      setMatchedInfluencers([]);
-    }
-  };
-
-  // Define handleCampaignClick inside App component
-  const handleCampaignClick = useCallback((campaign) => {
-    console.log("Campaign clicked:", campaign);
-    setSelectedCampaign(campaign);
-    searchInfluencers(campaign.id);
-    
-    // Set mock analytics data
-    setAnalyticsData({
-      engagementStats: {
-        timeline: [
-          { date: '2024-01', likes: 1200, comments: 300, shares: 150 },
-          { date: '2024-02', likes: 1500, comments: 400, shares: 200 },
-          { date: '2024-03', likes: 1800, comments: 450, shares: 250 },
-        ]
-      },
-      audienceDemographics: [
-        { name: '18-24', value: 30 },
-        { name: '25-34', value: 40 },
-        { name: '35-44', value: 20 },
-        { name: '45+', value: 10 },
-      ],
-      campaignMetrics: {
-        performance: [
-          { name: 'Week 1', reach: 5000, engagement: 3000, conversions: 150 },
-          { name: 'Week 2', reach: 7000, engagement: 4200, conversions: 210 },
-          { name: 'Week 3', reach: 9000, engagement: 5400, conversions: 270 },
-        ]
-      },
-      conversionData: {
-        roi: [
-          { date: 'Jan', spend: 1000, revenue: 2000 },
-          { date: 'Feb', spend: 1500, revenue: 3000 },
-          { date: 'Mar', spend: 2000, revenue: 4500 },
-        ]
-      },
-      keyMetrics: {
-        'Total Reach': '21,000',
-        'Avg. Engagement': '42%',
-        'Total Conversions': '630',
-        'ROI': '225%'
-      }
-    });
-  }, []);
-
-  return (
-    <Router>
-          <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<HomePage />} />
-        <Route 
-          path="/login" 
-          element={<Login setIsAuthenticated={setIsAuthenticated} />} 
-        />
-        <Route path="/register" element={<Register />} />
-
-        {/* Protected Routes */}
-        <Route
-          path="/dashboard/*"
-          element={
-            isAuthenticated ? (
-              <DashboardLayout>
-                <Routes>
-                  <Route path="campaigns" element={<CampaignList />} />
-                  <Route path="influencers" element={<InfluencerList campaigns={campaigns} onBookInfluencer={handleBookInfluencer} />} />
-                  <Route path="payments" element={<PaymentSection />} />
-                </Routes>
-              </DashboardLayout>
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-          </Routes>
-    </Router>
-  );
-}
-
-export default App;
+          "Authorization": `

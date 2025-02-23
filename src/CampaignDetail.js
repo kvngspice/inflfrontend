@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Container, Card, Row, Col, Button, Badge, Nav, Alert } from "react-bootstrap";
 import MatchedInfluencers from './components/MatchedInfluencers';
+import config from './config';
 
 function CampaignDetail() {
   const { id } = useParams();
@@ -27,7 +28,7 @@ function CampaignDetail() {
       const campaignId = id;
 
       // Fetch campaign details
-      const campaignResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/campaigns/${campaignId}/`);
+      const campaignResponse = await fetch(`${config.API_URL}/api/campaigns/${campaignId}/`);
       if (!campaignResponse.ok) {
         throw new Error('Failed to fetch campaign');
       }
@@ -35,7 +36,7 @@ function CampaignDetail() {
       setCampaign(campaignData);
 
       // Fetch matched influencers with the correct URL
-      const matchesResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/campaigns/${campaignId}/matches/`);
+      const matchesResponse = await fetch(`${config.API_URL}/api/campaigns/${campaignId}/matches/`);
       if (!matchesResponse.ok) {
         throw new Error('Failed to fetch matches');
       }
@@ -53,7 +54,7 @@ function CampaignDetail() {
 
   const fetchApprovedInfluencers = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/campaigns/${id}/approved-influencers/`);
+      const response = await fetch(`${config.API_URL}/api/campaigns/${id}/approved-influencers/`);
       const data = await response.json();
       setApprovedInfluencers(data);
       setIsRunning(data.length > 0);
@@ -64,7 +65,7 @@ function CampaignDetail() {
 
   const handleBookInfluencer = async (influencer) => {
     try {
-      const response = await fetch("${process.env.REACT_APP_API_URL}/api/bookings/", {
+      const response = await fetch(`${config.API_URL}/api/bookings/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
