@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { FaInstagram, FaTiktok, FaYoutube, FaTwitter, FaFilter, FaSort, FaStar, FaChartLine, FaExternalLinkAlt, FaUsers } from 'react-icons/fa';
 import InfluencerProfile from './InfluencerProfile';
 import './InfluencerList.css';
+import config from '../../config';
 
 const InfluencerList = () => {
   const [influencers, setInfluencers] = useState([]);
@@ -33,15 +34,24 @@ const InfluencerList = () => {
 
   const fetchInfluencers = async () => {
     try {
-      const response = await fetch('${process.env.REACT_APP_API_URL}/api/influencers/');
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${config.API_URL}/api/influencers/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        }
+      });
+
       if (!response.ok) {
-        throw new Error('Failed to fetch influencers');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
       const data = await response.json();
       setInfluencers(data);
-    } catch (err) {
-      setError(err.message);
-      console.error('Error fetching influencers:', err);
+    } catch (error) {
+      console.error("Error fetching influencers:", error);
+      setError("Failed to load influencers");
     } finally {
       setLoading(false);
     }

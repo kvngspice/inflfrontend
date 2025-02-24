@@ -6,6 +6,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, Cell
 } from 'recharts';
+import config from '../../config';
 
 // Add an error boundary component
 class ChartErrorBoundary extends React.Component {
@@ -137,7 +138,7 @@ const CampaignList = () => {
   const handleCreateCampaign = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('${process.env.REACT_APP_API_URL}/api/campaigns/', {
+      const response = await fetch(`${config.API_URL}/api/campaigns/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -175,23 +176,24 @@ const CampaignList = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      const response = await fetch('${process.env.REACT_APP_API_URL}/api/campaigns/', {
+      const response = await fetch(`${config.API_URL}/api/campaigns/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
         }
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch campaigns');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
       setCampaigns(data);
       setError(null);
     } catch (err) {
-      console.error('Error fetching campaigns:', err);
-      setError(err.message);
+      console.error("Error fetching campaigns:", err);
+      setError("Failed to load campaigns");
     } finally {
       setLoading(false);
     }
@@ -200,7 +202,7 @@ const CampaignList = () => {
   // Add delete handler
   const handleDeleteCampaign = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/campaigns/${campaignToDelete.id}/`, {
+      const response = await fetch(`${config.API_URL}/api/campaigns/${campaignToDelete.id}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -276,7 +278,7 @@ const CampaignList = () => {
   const handleFindInfluencers = async (campaign) => {
     setIsMatching(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/campaigns/${campaign.id}/match-influencers/`, {
+      const response = await fetch(`${config.API_URL}/api/campaigns/${campaign.id}/match-influencers/`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -300,7 +302,7 @@ const CampaignList = () => {
   // Add the handleBookInfluencer function
   const handleBookInfluencer = async (influencer, campaign) => {
     try {
-      const response = await fetch('${process.env.REACT_APP_API_URL}/api/bookings/create/', {
+      const response = await fetch(`${config.API_URL}/api/bookings/create/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
