@@ -1,70 +1,72 @@
 import React, { useState } from 'react';
-import { Container, Form, Button, Alert } from 'react-bootstrap';
-import { useNavigate, Link } from 'react-router-dom';
-import { FaSignInAlt } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import { Form, Button, Container, Alert } from 'react-bootstrap';
+import config from '../config';
 
 const Login = ({ setIsAuthenticated }) => {
-  const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    username: '',
-    password: ''
-  });
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
 
     try {
-      const response = await fetch('${process.env.REACT_APP_API_URL}/api/auth/login/', {
+      console.log('Attempting login to:', `${config.API_URL}/api/auth/login/`);
+      
+      const response = await fetch(`${config.API_URL}/api/auth/login/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          username,
+          password
+        })
       });
 
-      const data = await response.json();
-      console.log('Login response:', data); // Debug log
-
-      if (response.ok && data.token) {
-        // Store the token
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('userRole', data.role);
-        
-        // Update authentication state
-        setIsAuthenticated(true);
-
-        // Redirect to dashboard
-        navigate('/dashboard/campaigns');
-      } else {
-        setError(data.error || 'Login failed. Please check your credentials.');
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log('Error response:', errorText);
+        throw new Error(errorText || 'Login failed');
       }
-    } catch (err) {
-      console.error('Login error:', err);
-      setError('Login failed. Please try again.');
+
+      const data = await response.json();
+      console.log('Login successful:', data);
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('userRole', data.role || 'user');
+      setIsAuthenticated(true);
+      navigate('/dashboard/campaigns');
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('Invalid credentials or server error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <Container className="mt-5">
-      <div className="mx-auto" style={{ maxWidth: '400px' }}>
-        <h2 className="text-center mb-4">
-          <FaSignInAlt className="me-2" />
-          Login
-        </h2>
-        
+      <div className="login-form mx-auto" style={{ maxWidth: '400px' }}>
+        <h2 className="text-center mb-4">Login</h2>
         {error && <Alert variant="danger">{error}</Alert>}
-        
-        <Form onSubmit={handleSubmit}>
+        <Form onSubmit={onSubmit}>
           <Form.Group className="mb-3">
             <Form.Label>Username</Form.Label>
             <Form.Control
               type="text"
-              value={formData.username}
-              onChange={(e) => setFormData({...formData, username: e.target.value})}
+              placeholder="Enter username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               required
-              placeholder="Enter your username"
             />
           </Form.Group>
 
@@ -72,21 +74,21 @@ const Login = ({ setIsAuthenticated }) => {
             <Form.Label>Password</Form.Label>
             <Form.Control
               type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               required
-              placeholder="Enter your password"
             />
           </Form.Group>
 
-          <Button variant="primary" type="submit" className="w-100">
-            <FaSignInAlt className="me-2" />
-            Login
+          <Button 
+            variant="primary" 
+            type="submit" 
+            className="w-100"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Logging in...' : 'Login'}
           </Button>
-
-          <p className="text-center mt-3">
-            Don't have an account? <Link to="/register">Register here</Link>
-          </p>
         </Form>
       </div>
     </Container>
