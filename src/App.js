@@ -634,4 +634,38 @@ function App() {
     try {
       const response = await fetch(`${config.API_URL}/api/campaigns/${campaignId}/match-influencers/`, {
         headers: {
-          "Authorization": `
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Matched influencers data:", data);
+      setMatchedInfluencers(data);
+    } catch (error) {
+      console.error("Error fetching matched influencers:", error);
+      setMatchedInfluencers([]);
+    }
+  };
+
+  // Define handleCampaignClick inside App component
+  const handleCampaignClick = useCallback((campaign) => {
+    console.log("Campaign clicked:", campaign);
+    setSelectedCampaign(campaign);
+    searchInfluencers(campaign.id);
+    setAnalyticsData({
+      // ... rest of the analytics data
+    });
+  }, []);
+
+  return (
+    <div>
+      {/* Rest of the component content */}
+    </div>
+  );
+}
+
+export default App;
