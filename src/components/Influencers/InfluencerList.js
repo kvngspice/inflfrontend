@@ -59,19 +59,23 @@ const InfluencerList = () => {
 
   const fetchCampaigns = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/campaigns/', {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${config.API_URL}/api/campaigns/`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
         }
       });
+
       if (!response.ok) {
-        throw new Error('Failed to fetch campaigns');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
       setCampaigns(data);
     } catch (err) {
       console.error('Error fetching campaigns:', err);
-      setError(err.message);
+      setError('Failed to load campaigns');
     }
   };
 
@@ -175,14 +179,12 @@ const InfluencerList = () => {
 
   const handleBookingSubmit = async () => {
     try {
-      // Log the data being sent
       const bookingData = {
         influencer_id: selectedInfluencer.id,
         campaign_id: selectedCampaign
       };
-      console.log('Sending booking request with data:', bookingData);
-
-      const response = await fetch('http://127.0.0.1:8000/api/bookings/create/', {
+      
+      const response = await fetch(`${config.API_URL}/api/bookings/create/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -191,24 +193,18 @@ const InfluencerList = () => {
         body: JSON.stringify(bookingData)
       });
 
-      const data = await response.json();
-      console.log('Response from server:', data);
-
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create booking');
+        throw new Error('Failed to create booking');
       }
 
-      // Show success message
+      const data = await response.json();
       alert('Booking created successfully!');
-      
-      // Close modal and reset state
       setShowBookingModal(false);
       setSelectedInfluencer(null);
       setSelectedCampaign('');
-
     } catch (err) {
       console.error('Booking error:', err);
-      alert(err.message || 'Failed to create booking. Please try again.');
+      alert('Failed to create booking. Please try again.');
     }
   };
 

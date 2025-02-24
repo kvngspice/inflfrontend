@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Card, Row, Col, Table, Badge, Button, Modal, Spinner, Alert } from 'react-bootstrap';
 import { FaCreditCard, FaHistory, FaFileInvoice, FaWallet, FaBell } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import config from '../config';
 
 const PaymentSection = () => {
   const [transactions, setTransactions] = useState([]);
@@ -51,10 +52,11 @@ const PaymentSection = () => {
 
       console.log('Fetching approved bookings...');  // Debug log
       
-      const response = await fetch('${process.env.REACT_APP_API_URL}/api/bookings/approved-pending-payment/', {
+      const response = await fetch(`${config.API_URL}/api/bookings/approved-pending-payment/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
         }
       });
       
@@ -64,7 +66,7 @@ const PaymentSection = () => {
           navigate('/login');
           return;
         }
-        throw new Error('Failed to fetch approved bookings');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
@@ -85,7 +87,7 @@ const PaymentSection = () => {
 
   const handlePaymentSubmit = async () => {
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/payments/initiate/${selectedBooking.id}/`, {
+      const response = await fetch(`${config.API_URL}/api/payments/initiate/${selectedBooking.id}/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -110,7 +112,7 @@ const PaymentSection = () => {
 
   const completePayment = async (paymentId) => {
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/payments/complete/${paymentId}/`, {
+      const response = await fetch(`${config.API_URL}/api/payments/complete/${paymentId}/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
