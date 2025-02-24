@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Form, Button, Container, Alert } from 'react-bootstrap';
+import { Form, Button, Container, Alert, Spinner } from 'react-bootstrap';
 import config from '../config';
 
 const Login = ({ setIsAuthenticated }) => {
@@ -16,38 +16,54 @@ const Login = ({ setIsAuthenticated }) => {
     setIsLoading(true);
 
     try {
-      console.log('Attempting login to:', `${config.API_URL}/api/auth/login/`);
+      const loginUrl = `${config.API_URL}/api/auth/login/`;
+      console.log('Attempting login to:', loginUrl);
       
-      const response = await fetch(`${config.API_URL}/api/auth/login/`, {
+      const response = await fetch(loginUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          // Add explicit CORS headers
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type'
         },
+        credentials: 'include',
         body: JSON.stringify({
-          username,
-          password
+          username: username.trim(),
+          password: password.trim()
         })
       });
 
+      // Log response status for debugging
       console.log('Response status:', response.status);
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.log('Error response:', errorText);
-        throw new Error(errorText || 'Login failed');
+      // Get response text first
+      const responseText = await response.text();
+      console.log('Response text:', responseText);
+
+      let data;
+      try {
+        // Try to parse as JSON
+        data = JSON.parse(responseText);
+      } catch (e) {
+        console.error('Failed to parse JSON:', e);
+        throw new Error('Invalid server response');
       }
 
-      const data = await response.json();
-      console.log('Login successful:', data);
+      if (!response.ok) {
+        throw new Error(data.message || data.error || 'Login failed');
+      }
 
+      // Success path
       localStorage.setItem('token', data.token);
       localStorage.setItem('userRole', data.role || 'user');
       setIsAuthenticated(true);
       navigate('/dashboard/campaigns');
     } catch (error) {
       console.error('Login error:', error);
-      setError('Invalid credentials or server error');
+      setError(error.message || 'Invalid credentials or server error');
     } finally {
       setIsLoading(false);
     }
@@ -67,6 +83,7 @@ const Login = ({ setIsAuthenticated }) => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
+              autoComplete="username"
             />
           </Form.Group>
 
@@ -78,6 +95,7 @@ const Login = ({ setIsAuthenticated }) => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              autoComplete="current-password"
             />
           </Form.Group>
 
@@ -87,7 +105,21 @@ const Login = ({ setIsAuthenticated }) => {
             className="w-100"
             disabled={isLoading}
           >
-            {isLoading ? 'Logging in...' : 'Login'}
+            {isLoading ? (
+              <>
+                <Spinner
+                  as="span"
+                  animation="border"
+                  size="sm"
+                  role="status"
+                  aria-hidden="true"
+                  className="me-2"
+                />
+                Logging in...
+              </>
+            ) : (
+              'Login'
+            )}
           </Button>
         </Form>
       </div>
