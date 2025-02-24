@@ -331,7 +331,9 @@ function App() {
 
   // Check authentication status on app load
   useEffect(() => {
+    console.log('Checking authentication...');
     const token = localStorage.getItem("token");
+    console.log('Token found:', !!token);
     setIsAuthenticated(!!token);
   }, []);
 
@@ -679,11 +681,37 @@ function App() {
     });
   }, []);
 
+  console.log('App rendering, isAuthenticated:', isAuthenticated);
+
   return (
     <Router>
       <ErrorBoundary>
         <Routes>
-          {/* Your routes */}
+          {/* Public Routes */}
+          <Route path="/" element={<HomePage />} />
+          <Route 
+            path="/login" 
+            element={<Login setIsAuthenticated={setIsAuthenticated} />} 
+          />
+          <Route path="/register" element={<Register />} />
+
+          {/* Protected Routes */}
+          <Route
+            path="/dashboard/*"
+            element={
+              isAuthenticated ? (
+                <DashboardLayout>
+                  <Routes>
+                    <Route path="campaigns" element={<CampaignList />} />
+                    <Route path="influencers" element={<InfluencerList campaigns={campaigns} onBookInfluencer={handleBookInfluencer} />} />
+                    <Route path="payments" element={<PaymentSection />} />
+                  </Routes>
+                </DashboardLayout>
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
         </Routes>
       </ErrorBoundary>
     </Router>
