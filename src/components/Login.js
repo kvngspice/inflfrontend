@@ -23,13 +23,8 @@ const Login = ({ setIsAuthenticated }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          // Add explicit CORS headers
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type'
+          'Accept': 'application/json'
         },
-        credentials: 'include',
         body: JSON.stringify({
           username: username.trim(),
           password: password.trim()
