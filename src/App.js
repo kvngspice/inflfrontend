@@ -22,6 +22,7 @@ import DashboardLayout from './components/DashboardLayout';
 import CampaignList from './components/Campaigns/CampaignList';
 import PaymentSection from './components/PaymentSection';
 import config from './config';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
@@ -381,11 +382,28 @@ function App() {
     fetchInfluencers();
   }, []);
 
-  const fetchCampaigns = () => {
-    fetch(`${config.API_URL}/api/campaigns/`)
-      .then((response) => response.json())
-      .then((data) => setCampaigns(data))
-      .catch((error) => console.error("Error fetching campaigns:", error));
+  const fetchCampaigns = async () => {
+    try {
+      const response = await fetch(`${config.API_URL}/api/campaigns/`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem("token")}`,
+        },
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setCampaigns(data);
+    } catch (error) {
+      console.error("Error fetching campaigns:", error);
+      setError('Failed to load campaigns');
+    }
   };
 
   const fetchInfluencers = async () => {
@@ -662,9 +680,13 @@ function App() {
   }, []);
 
   return (
-    <div>
-      {/* Rest of the component content */}
-    </div>
+    <Router>
+      <ErrorBoundary>
+        <Routes>
+          {/* Your routes */}
+        </Routes>
+      </ErrorBoundary>
+    </Router>
   );
 }
 
