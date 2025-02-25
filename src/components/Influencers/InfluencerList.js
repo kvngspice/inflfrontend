@@ -504,16 +504,19 @@ const InfluencerList = () => {
                   </div>
                 </div>
 
-                <div className="d-flex justify-content-between">
-                  <Button 
-                    variant="outline-primary" 
-                    size="sm" 
+                <div className="d-flex justify-content-between align-items-center">
+                  <Button
+                    variant="outline-primary"
+                    size="sm"
                     onClick={() => handleViewProfile(influencer)}
-                    className="me-2"
                   >
                     View Profile
                   </Button>
-                  <Button variant="success" size="sm" onClick={() => handleBookNow(influencer)}>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleBookNow(influencer)}
+                  >
                     Book Now
                   </Button>
                 </div>
@@ -541,18 +544,13 @@ const InfluencerList = () => {
         show={showProfile}
         onHide={() => setShowProfile(false)}
         size="lg"
-        centered
-        dialogClassName="profile-modal"
       >
         <Modal.Header closeButton>
           <Modal.Title>Influencer Profile</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {selectedInfluencer && (
-            <InfluencerProfile 
-              influencerId={selectedInfluencer.id} 
-              onClose={() => setShowProfile(false)}
-            />
+            <InfluencerProfile influencerId={selectedInfluencer.id} />
           )}
         </Modal.Body>
       </Modal>
@@ -593,5 +591,8 @@ const InfluencerList = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+    </div>
+  );
+};
 
-      <style jsx>{`
+export default InfluencerList;
