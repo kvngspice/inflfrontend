@@ -16,7 +16,7 @@ const InfluencerDetail = () => {
   const [date, setDate] = useState("");
 
   useEffect(() => {
-    fetch(`${process.env.REACT_APP_API_URL}/api/influencers/${id}/`)
+    fetch(`http://127.0.0.1:8000/api/influencers/${id}/`)
       .then((response) => {
         if (!response.ok) {
           throw new Error("Failed to fetch influencer details.");
@@ -45,7 +45,7 @@ const InfluencerDetail = () => {
       date: date,
     };
 
-    fetch("${process.env.REACT_APP_API_URL}/api/bookings/", {
+    fetch("http://127.0.0.1:8000/api/bookings/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(bookingData),

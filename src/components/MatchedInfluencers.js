@@ -1,8 +1,30 @@
-import React from 'react';
-import { Row, Col, Card, Button, Badge } from 'react-bootstrap';
+import React, { useState } from 'react';
+import { Row, Col, Card, Button, Badge, Modal } from 'react-bootstrap';
 import PropTypes from 'prop-types';
 
-const MatchedInfluencers = ({ influencers, onBookInfluencer }) => {
+const MatchedInfluencers = ({ influencers, onBookInfluencer, campaignBudget }) => {
+  const [showBudgetWarning, setShowBudgetWarning] = useState(false);
+  const [selectedInfluencer, setSelectedInfluencer] = useState(null);
+
+  const handleBookClick = (influencer) => {
+    console.log('Budget check:', {
+      baseFee: parseFloat(influencer.base_fee),
+      campaignBudget: parseFloat(campaignBudget)
+    });
+
+    if (parseFloat(influencer.base_fee) > parseFloat(campaignBudget)) {
+      setSelectedInfluencer(influencer);
+      setShowBudgetWarning(true);
+    } else {
+      onBookInfluencer(influencer);
+    }
+  };
+
+  const handleConfirmBooking = () => {
+    setShowBudgetWarning(false);
+    onBookInfluencer(selectedInfluencer);
+  };
+
   console.log('MatchedInfluencers props:', { influencers }); // Debug log
 
   if (!influencers) {
@@ -66,10 +88,19 @@ const MatchedInfluencers = ({ influencers, onBookInfluencer }) => {
                   ))}
                 </div>
 
+                <div className="mb-3">
+                  <div className="d-flex justify-content-between mb-2">
+                    <span className="text-muted">Base Fee:</span>
+                    <span className="fw-bold">
+                      ${parseFloat(influencer.base_fee).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
                 <Button 
                   variant="primary" 
                   className="w-100"
-                  onClick={() => onBookInfluencer(influencer)}
+                  onClick={() => handleBookClick(influencer)}
                 >
                   Book Influencer
                 </Button>
@@ -78,6 +109,27 @@ const MatchedInfluencers = ({ influencers, onBookInfluencer }) => {
           </Col>
         ))}
       </Row>
+
+      {/* Budget Warning Modal */}
+      <Modal show={showBudgetWarning} onHide={() => setShowBudgetWarning(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Budget Warning</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>
+            This influencer's base fee (${selectedInfluencer?.base_fee}) is above your campaign budget (${campaignBudget}).
+          </p>
+          <p>Would you like to proceed with booking anyway?</p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowBudgetWarning(false)}>
+            Don't Book
+          </Button>
+          <Button variant="primary" onClick={handleConfirmBooking}>
+            Book Anyway
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };
@@ -92,10 +144,12 @@ MatchedInfluencers.propTypes = {
       engagement_rate: PropTypes.number.isRequired,
       content_category: PropTypes.string,
       profile_picture: PropTypes.string,
+      base_fee: PropTypes.number.isRequired,
       tags: PropTypes.arrayOf(PropTypes.string)
     })
   ).isRequired,
-  onBookInfluencer: PropTypes.func.isRequired
+  onBookInfluencer: PropTypes.func.isRequired,
+  campaignBudget: PropTypes.number.isRequired
 };
 
 export default MatchedInfluencers; 

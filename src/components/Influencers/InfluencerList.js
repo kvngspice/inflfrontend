@@ -26,6 +26,7 @@ const InfluencerList = () => {
   const [selectedCampaign, setSelectedCampaign] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [maxBudget, setMaxBudget] = useState('');
 
   useEffect(() => {
     fetchInfluencers();
@@ -42,16 +43,15 @@ const InfluencerList = () => {
           'Content-Type': 'application/json',
         }
       });
-
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error('Failed to fetch influencers');
       }
-
       const data = await response.json();
+      console.log('Fetched influencers:', data);
       setInfluencers(data);
-    } catch (error) {
-      console.error("Error fetching influencers:", error);
-      setError("Failed to load influencers");
+    } catch (err) {
+      setError(err.message);
+      console.error('Error fetching influencers:', err);
     } finally {
       setLoading(false);
     }
@@ -59,23 +59,21 @@ const InfluencerList = () => {
 
   const fetchCampaigns = async () => {
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`${config.API_URL}/api/campaigns/`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         }
       });
-
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error('Failed to fetch campaigns');
       }
       const data = await response.json();
       setCampaigns(data);
     } catch (err) {
       console.error('Error fetching campaigns:', err);
-      setError('Failed to load campaigns');
+      setError(err.message);
     }
   };
 
@@ -91,10 +89,19 @@ const InfluencerList = () => {
   };
 
   const getProfileImage = (imageUrl, name) => {
+    console.log('Raw image URL received:', imageUrl); // Debug log
+
     if (!imageUrl) {
-      return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=200`;
     }
-    return imageUrl;
+
+    // Handle both relative and absolute URLs
+    const fullUrl = imageUrl.startsWith('http') 
+        ? imageUrl 
+        : `http://127.0.0.1:8000${imageUrl}`;
+    
+    console.log('Constructed image URL:', fullUrl); // Debug log
+    return fullUrl;
   };
 
   const filterInfluencers = useCallback(() => {
@@ -138,6 +145,13 @@ const InfluencerList = () => {
       );
     }
 
+    // Filter by maximum budget
+    if (maxBudget) {
+      results = results.filter(influencer => 
+        parseFloat(influencer.base_fee) <= parseFloat(maxBudget)
+      );
+    }
+
     // Sort results
     if (sortField) {
       results.sort((a, b) => {
@@ -158,7 +172,7 @@ const InfluencerList = () => {
     }
 
     return results;
-  }, [influencers, searchQuery, selectedPlatform, minFollowers, advancedFilters, sortField, sortDirection]);
+  }, [influencers, searchQuery, selectedPlatform, minFollowers, advancedFilters, sortField, sortDirection, maxBudget]);
 
   const filteredAndSortedInfluencers = useMemo(() => {
     let filtered = filterInfluencers();
@@ -173,38 +187,48 @@ const InfluencerList = () => {
   };
 
   const handleBookNow = (influencer) => {
+    console.log("Starting booking process for influencer:", influencer);  // Debug log
     setSelectedInfluencer(influencer);
     setShowBookingModal(true);
   };
 
   const handleBookingSubmit = async () => {
     try {
-      const bookingData = {
-        influencer_id: selectedInfluencer.id,
-        campaign_id: selectedCampaign
-      };
-      
+      // Check budget compatibility
+      const campaign = campaigns.find(c => c.id === parseInt(selectedCampaign));
+      if (selectedInfluencer.base_rate > campaign.budget) {
+        alert(`Cannot book this influencer. Their base rate ($${selectedInfluencer.base_rate}) exceeds the campaign budget ($${campaign.budget})`);
+        return;
+      }
+
       const response = await fetch(`${config.API_URL}/api/bookings/create/`, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify(bookingData)
+        body: JSON.stringify({
+          influencer_id: selectedInfluencer.id,
+          campaign_id: selectedCampaign
+        })
       });
 
+      const data = await response.json();
+      console.log("Booking response:", data);  // Debug log
+
       if (!response.ok) {
-        throw new Error('Failed to create booking');
+        throw new Error(data.error || 'Failed to create booking');
       }
 
-      const data = await response.json();
       alert('Booking created successfully!');
       setShowBookingModal(false);
       setSelectedInfluencer(null);
       setSelectedCampaign('');
+
     } catch (err) {
       console.error('Booking error:', err);
-      alert('Failed to create booking. Please try again.');
+      alert(err.message || 'Failed to create booking. Please try again.');
     }
   };
 
@@ -304,6 +328,17 @@ const InfluencerList = () => {
               <option value="South Africa">South Africa</option>
             </Form.Select>
           </Col>
+          <Col xs={12} md={6} lg={3}>
+            <Form.Group className="mb-3">
+              <Form.Label>Maximum Budget</Form.Label>
+              <Form.Control
+                type="number"
+                value={maxBudget}
+                onChange={(e) => setMaxBudget(e.target.value)}
+                placeholder="Enter maximum budget"
+              />
+            </Form.Group>
+          </Col>
         </Row>
 
         <Row className="mt-3">
@@ -355,6 +390,7 @@ const InfluencerList = () => {
                     className="rounded-circle mb-2 mb-sm-0 me-sm-3"
                     style={{ width: '60px', height: '60px', objectFit: 'cover' }}
                     onError={(e) => {
+                      console.log('Image failed to load:', e.target.src);
                       e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(influencer.name)}&size=60`;
                     }}
                   />
@@ -450,27 +486,23 @@ const InfluencerList = () => {
           <Modal.Title>Book Influencer</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {selectedInfluencer && (
-            <>
-              <h5>{selectedInfluencer.name}</h5>
-              <p>Select Campaign:</p>
-              <Form.Select 
+          <Form>
+            <Form.Group>
+              <Form.Label>Select Campaign</Form.Label>
+              <Form.Select
                 value={selectedCampaign}
                 onChange={(e) => setSelectedCampaign(e.target.value)}
                 required
               >
-                <option value="">Select a campaign</option>
+                <option value="">Choose a campaign...</option>
                 {campaigns.map(campaign => (
                   <option key={campaign.id} value={campaign.id}>
-                    {campaign.name} - {campaign.industry} ({campaign.budget})
+                    {campaign.name} (Budget: ${campaign.budget})
                   </option>
                 ))}
               </Form.Select>
-              {campaigns.length === 0 && (
-                <p className="text-muted mt-2">No campaigns available. Please create a campaign first.</p>
-              )}
-            </>
-          )}
+            </Form.Group>
+          </Form>
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowBookingModal(false)}>
@@ -479,7 +511,7 @@ const InfluencerList = () => {
           <Button 
             variant="primary" 
             onClick={handleBookingSubmit}
-            disabled={!selectedCampaign || campaigns.length === 0}
+            disabled={!selectedCampaign}
           >
             Confirm Booking
           </Button>

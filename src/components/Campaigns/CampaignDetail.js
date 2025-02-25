@@ -12,13 +12,13 @@ function CampaignDetail() {
 
   useEffect(() => {
     // Fetch campaign details
-    fetch(`${process.env.REACT_APP_API_URL}/api/campaigns/${id}/`)
+    fetch(`http://127.0.0.1:8000/api/campaigns/${id}/`)
       .then((response) => response.json())
       .then((data) => setCampaign(data))
       .catch((error) => console.error("Error fetching campaign:", error));
 
     // Fetch analytics data
-    fetch(`${process.env.REACT_APP_API_URL}/api/campaigns/${id}/analytics/`)
+    fetch(`http://127.0.0.1:8000/api/campaigns/${id}/analytics/`)
       .then((response) => response.json())
       .then((data) => setAnalytics(data))
       .catch((error) => console.error("Error fetching analytics:", error));

@@ -66,7 +66,7 @@ const PaymentSection = () => {
           navigate('/login');
           return;
         }
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error('Failed to fetch approved bookings');
       }
       
       const data = await response.json();
@@ -90,8 +90,9 @@ const PaymentSection = () => {
       const response = await fetch(`${config.API_URL}/api/payments/initiate/${selectedBooking.id}/`, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
 

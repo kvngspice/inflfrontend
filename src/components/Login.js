@@ -1,124 +1,164 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Form, Button, Container, Alert, Spinner } from 'react-bootstrap';
+import { Container, Form, Button, Alert, Card, Row, Col } from 'react-bootstrap';
+import { useNavigate, Link } from 'react-router-dom';
+import { FaSignInAlt, FaUser, FaLock, FaArrowRight } from 'react-icons/fa';
 import config from '../config';
 
 const Login = ({ setIsAuthenticated }) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    username: '',
+    password: ''
+  });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const onSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);
+    setLoading(true);
 
     try {
-      const loginUrl = `${config.API_URL}/api/auth/login/`;
-      console.log('Attempting login to:', loginUrl);
-      
-      const response = await fetch(loginUrl, {
+      const response = await fetch(`${config.API_URL}/api/auth/login/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({
-          username: username.trim(),
-          password: password.trim()
-        })
+        body: JSON.stringify(formData)
       });
 
-      // Log response status for debugging
-      console.log('Response status:', response.status);
-      
-      // Get response text first
-      const responseText = await response.text();
-      console.log('Response text:', responseText);
+      const data = await response.json();
 
-      let data;
-      try {
-        // Try to parse as JSON
-        data = JSON.parse(responseText);
-      } catch (e) {
-        console.error('Failed to parse JSON:', e);
-        throw new Error('Invalid server response');
+      if (response.ok && data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userRole', data.role);
+        setIsAuthenticated(true);
+        navigate('/dashboard/campaigns');
+      } else {
+        setError(data.error || 'Login failed. Please check your credentials.');
       }
-
-      if (!response.ok) {
-        throw new Error(data.message || data.error || 'Login failed');
-      }
-
-      // Success path
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('userRole', data.role || 'user');
-      setIsAuthenticated(true);
-      navigate('/dashboard/campaigns');
-    } catch (error) {
-      console.error('Login error:', error);
-      setError(error.message || 'Invalid credentials or server error');
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Login failed. Please try again.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <Container className="mt-5">
-      <div className="login-form mx-auto" style={{ maxWidth: '400px' }}>
-        <h2 className="text-center mb-4">Login</h2>
-        {error && <Alert variant="danger">{error}</Alert>}
-        <Form onSubmit={onSubmit}>
-          <Form.Group className="mb-3">
-            <Form.Label>Username</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Enter username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              autoComplete="username"
-            />
-          </Form.Group>
+    <div className="login-page">
+      <Container className="py-5">
+        <Row className="justify-content-center">
+          <Col md={8} lg={6} xl={5}>
+            <div className="text-center mb-4">
+              <h1 className="h3 mb-3 fw-bold">Welcome Back!</h1>
+              <p className="text-muted">Sign in to continue to your dashboard</p>
+            </div>
 
-          <Form.Group className="mb-3">
-            <Form.Label>Password</Form.Label>
-            <Form.Control
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-            />
-          </Form.Group>
+            <Card className="shadow-sm border-0">
+              <Card.Body className="p-4">
+                {error && (
+                  <Alert variant="danger" className="mb-4">
+                    {error}
+                  </Alert>
+                )}
 
-          <Button 
-            variant="primary" 
-            type="submit" 
-            className="w-100"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <Spinner
-                  as="span"
-                  animation="border"
-                  size="sm"
-                  role="status"
-                  aria-hidden="true"
-                  className="me-2"
-                />
-                Logging in...
-              </>
-            ) : (
-              'Login'
-            )}
-          </Button>
-        </Form>
-      </div>
-    </Container>
+                <Form onSubmit={handleSubmit}>
+                  <Form.Group className="mb-4">
+                    <div className="input-group">
+                      <span className="input-group-text bg-light border-0">
+                        <FaUser className="text-muted" />
+                      </span>
+                      <Form.Control
+                        type="text"
+                        placeholder="Username"
+                        value={formData.username}
+                        onChange={(e) => setFormData({...formData, username: e.target.value})}
+                        required
+                        className="border-0 border-start"
+                      />
+                    </div>
+                  </Form.Group>
+
+                  <Form.Group className="mb-4">
+                    <div className="input-group">
+                      <span className="input-group-text bg-light border-0">
+                        <FaLock className="text-muted" />
+                      </span>
+                      <Form.Control
+                        type="password"
+                        placeholder="Password"
+                        value={formData.password}
+                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                        required
+                        className="border-0 border-start"
+                      />
+                    </div>
+                  </Form.Group>
+
+                  <Button 
+                    variant="primary" 
+                    type="submit" 
+                    className="w-100 mb-3 rounded-pill"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      'Signing in...'
+                    ) : (
+                      <>
+                        Sign In <FaArrowRight className="ms-2" />
+                      </>
+                    )}
+                  </Button>
+                </Form>
+              </Card.Body>
+            </Card>
+
+            <div className="text-center mt-4">
+              <p className="mb-0">
+                Don't have an account?{' '}
+                <Link to="/register" className="text-primary text-decoration-none">
+                  Create Account <FaArrowRight className="ms-1" size={12} />
+                </Link>
+              </p>
+            </div>
+          </Col>
+        </Row>
+      </Container>
+
+      <style jsx>{`
+        .login-page {
+          min-height: 100vh;
+          background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+          display: flex;
+          align-items: center;
+        }
+
+        .input-group-text {
+          padding: 0.75rem 1rem;
+        }
+
+        .form-control {
+          padding: 0.75rem 1rem;
+          background-color: #f8f9fa;
+        }
+
+        .form-control:focus {
+          box-shadow: none;
+          border-color: #primary;
+        }
+
+        .btn-primary {
+          padding: 0.75rem 1.5rem;
+          transition: transform 0.2s;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+          transform: translateY(-2px);
+        }
+      `}</style>
+    </div>
   );
 };
 

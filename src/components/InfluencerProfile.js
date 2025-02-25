@@ -26,6 +26,25 @@ const InfluencerProfile = ({ influencerId, onClose }) => {
     fetchProfile();
   }, [influencerId]);
 
+  const getProfileImage = (imageUrl, name) => {
+    console.log('Profile image URL:', imageUrl); // Debug log
+
+    if (!imageUrl) {
+      return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=200`;
+    }
+
+    // Handle different URL formats
+    if (imageUrl.startsWith('/media/')) {
+      return `http://127.0.0.1:8000${imageUrl}`;
+    }
+
+    if (imageUrl.startsWith('http')) {
+      return imageUrl;
+    }
+
+    return `http://127.0.0.1:8000/media/${imageUrl}`;
+  };
+
   if (loading) {
     return (
       <div className="text-center p-5">
@@ -50,10 +69,14 @@ const InfluencerProfile = ({ influencerId, onClose }) => {
         <Row>
           <Col md={4} className="text-center">
             <img
-              src={profile.profile_picture || 'https://via.placeholder.com/150'}
+              src={getProfileImage(profile.profile_picture, profile.name)}
               alt={profile.name}
               className="rounded-circle mb-3"
               style={{ width: '150px', height: '150px', objectFit: 'cover' }}
+              onError={(e) => {
+                console.log('Profile image failed to load:', e.target.src);
+                e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&size=150`;
+              }}
             />
           </Col>
           <Col md={8}>

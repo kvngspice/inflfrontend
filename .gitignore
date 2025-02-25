@@ -23,4 +23,3 @@ echo # logs >> .gitignore
 echo npm-debug.log* >> .gitignore
 echo yarn-debug.log* >> .gitignore
 echo yarn-error.log* >> .gitignore
-echo .vercel >> .gitignore

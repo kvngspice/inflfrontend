@@ -1,105 +1,238 @@
-import React, { useState, useEffect } from "react";
-import { Container, Row, Col, Button, Card, Spinner } from 'react-bootstrap';
-import { Link, useNavigate } from 'react-router-dom';
-import { FaUserPlus, FaSignInAlt, FaBullhorn, FaUsers, FaChartLine } from 'react-icons/fa';
+import React from 'react';
+import { Container, Row, Col, Button, Card } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
+import { 
+  FaUserPlus, FaSignInAlt, FaBullhorn, FaUsers, 
+  FaChartLine, FaRocket, FaHandshake, FaGlobe 
+} from 'react-icons/fa';
 
 const HomePage = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      setIsAuthenticated(true);
-    }
-    setIsLoading(false);
-  }, []);
-
-  if (isLoading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center" style={{ height: "100vh" }}>
-        <Spinner animation="border" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </Spinner>
-      </div>
-    );
-  }
-
   return (
     <div className="homepage">
       {/* Hero Section */}
-      <div className="hero-section bg-primary text-white py-5">
+      <div className="hero-section text-white py-5">
         <Container>
-          <Row className="align-items-center">
-            <Col md={6}>
-              <h1 className="display-4">Connect with Influencers</h1>
-              <p className="lead">
-                Find the perfect influencers for your brand and manage your campaigns effectively
+          <Row className="align-items-center min-vh-75">
+            <Col lg={6} className="mb-5 mb-lg-0">
+              <h1 className="display-4 fw-bold mb-4 animate-in">
+                Connect with Top Influencers
+              </h1>
+              <p className="lead mb-4 opacity-90">
+                Launch impactful campaigns with Africa's most engaging content creators. 
+                Our AI-powered platform matches you with influencers that align perfectly with your brand.
               </p>
-              <div className="mt-4">
+              <div className="d-flex gap-3 mb-4">
                 <Link to="/register">
-                  <Button variant="light" size="lg" className="me-3">
+                  <Button variant="light" size="lg" className="rounded-pill px-4 hover-scale">
                     <FaUserPlus className="me-2" />
-                    Register
+                    Get Started
                   </Button>
                 </Link>
                 <Link to="/login">
-                  <Button variant="outline-light" size="lg">
+                  <Button variant="outline-light" size="lg" className="rounded-pill px-4 hover-scale">
                     <FaSignInAlt className="me-2" />
                     Login
                   </Button>
                 </Link>
               </div>
+              <div className="stats-row d-flex gap-4">
+                <div className="stat-item">
+                  <h3 className="mb-0">10K+</h3>
+                  <p className="mb-0 opacity-75">Influencers</p>
+                </div>
+                <div className="stat-item">
+                  <h3 className="mb-0">500+</h3>
+                  <p className="mb-0 opacity-75">Brands</p>
+                </div>
+                <div className="stat-item">
+                  <h3 className="mb-0">98%</h3>
+                  <p className="mb-0 opacity-75">Success Rate</p>
+                </div>
+              </div>
             </Col>
-            <Col md={6}>
-              {/* Add an illustration or image here */}
+            <Col lg={6} className="d-none d-lg-block">
+              <img 
+                src="/hero-image.png" 
+                alt="Platform Preview" 
+                className="img-fluid rounded-lg shadow-lg"
+              />
             </Col>
           </Row>
         </Container>
       </div>
 
       {/* Features Section */}
-      <Container className="py-5">
-        <h2 className="text-center mb-5">Why Choose Us?</h2>
-        <Row>
-          <Col md={4}>
-            <Card className="h-100 shadow-sm">
-              <Card.Body className="text-center">
-                <FaUsers className="text-primary mb-3" size={40} />
-                <Card.Title>Find Influencers</Card.Title>
-                <Card.Text>
-                  Connect with influencers that match your brand's values and target audience
-                </Card.Text>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={4}>
-            <Card className="h-100 shadow-sm">
-              <Card.Body className="text-center">
-                <FaBullhorn className="text-primary mb-3" size={40} />
-                <Card.Title>Manage Campaigns</Card.Title>
-                <Card.Text>
-                  Create and manage your influencer marketing campaigns efficiently
-                </Card.Text>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={4}>
-            <Card className="h-100 shadow-sm">
-              <Card.Body className="text-center">
-                <FaChartLine className="text-primary mb-3" size={40} />
-                <Card.Title>Track Performance</Card.Title>
-                <Card.Text>
-                  Monitor campaign performance and influencer metrics in real-time
-                </Card.Text>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
-      </Container>
+      <section className="features-section py-5">
+        <Container>
+          <h2 className="text-center mb-2">Why Choose Our Platform?</h2>
+          <p className="text-center text-muted mb-5">
+            Everything you need to run successful influencer campaigns
+          </p>
+          <Row className="g-4">
+            <Col md={3}>
+              <Card className="feature-card h-100 border-0 shadow-sm hover-lift">
+                <Card.Body className="text-center p-4">
+                  <div className="icon-wrapper mb-3">
+                    <FaUsers className="text-primary" size={40} />
+                  </div>
+                  <Card.Title>Smart Matching</Card.Title>
+                  <Card.Text>
+                    AI-powered algorithm finds the perfect influencers for your brand and campaign goals
+                  </Card.Text>
+                </Card.Body>
+              </Card>
+            </Col>
+            <Col md={3}>
+              <Card className="feature-card h-100 border-0 shadow-sm hover-lift">
+                <Card.Body className="text-center p-4">
+                  <div className="icon-wrapper mb-3">
+                    <FaRocket className="text-success" size={40} />
+                  </div>
+                  <Card.Title>Quick Launch</Card.Title>
+                  <Card.Text>
+                    Set up and launch your campaign in minutes with our streamlined process
+                  </Card.Text>
+                </Card.Body>
+              </Card>
+            </Col>
+            <Col md={3}>
+              <Card className="feature-card h-100 border-0 shadow-sm hover-lift">
+                <Card.Body className="text-center p-4">
+                  <div className="icon-wrapper mb-3">
+                    <FaChartLine className="text-info" size={40} />
+                  </div>
+                  <Card.Title>Real-time Analytics</Card.Title>
+                  <Card.Text>
+                    Track campaign performance and ROI with detailed analytics dashboard
+                  </Card.Text>
+                </Card.Body>
+              </Card>
+            </Col>
+            <Col md={3}>
+              <Card className="feature-card h-100 border-0 shadow-sm hover-lift">
+                <Card.Body className="text-center p-4">
+                  <div className="icon-wrapper mb-3">
+                    <FaHandshake className="text-warning" size={40} />
+                  </div>
+                  <Card.Title>Secure Payments</Card.Title>
+                  <Card.Text>
+                    Safe and transparent payment system with escrow protection
+                  </Card.Text>
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
+        </Container>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="how-it-works bg-light py-5">
+        <Container>
+          <h2 className="text-center mb-5">How It Works</h2>
+          <Row className="g-4">
+            <Col md={4}>
+              <div className="step-card text-center">
+                <div className="step-number mb-3">1</div>
+                <h4>Create Campaign</h4>
+                <p>Define your campaign goals, budget, and target audience</p>
+              </div>
+            </Col>
+            <Col md={4}>
+              <div className="step-card text-center">
+                <div className="step-number mb-3">2</div>
+                <h4>Match Influencers</h4>
+                <p>Get matched with relevant influencers for your campaign</p>
+              </div>
+            </Col>
+            <Col md={4}>
+              <div className="step-card text-center">
+                <div className="step-number mb-3">3</div>
+                <h4>Track Results</h4>
+                <p>Monitor campaign performance and measure ROI</p>
+              </div>
+            </Col>
+          </Row>
+        </Container>
+      </section>
+
+      {/* CTA Section */}
+      <section className="cta-section text-center py-5">
+        <Container>
+          <h2 className="mb-4">Ready to Start Your Campaign?</h2>
+          <Link to="/register">
+            <Button variant="primary" size="lg" className="rounded-pill px-5 hover-scale">
+              Get Started Now
+            </Button>
+          </Link>
+        </Container>
+      </section>
+
+      <style jsx>{`
+        .hero-section {
+          background: linear-gradient(135deg, #4158D0 0%, #C850C0 46%, #FFCC70 100%);
+          min-height: 80vh;
+          display: flex;
+          align-items: center;
+        }
+
+        .animate-in {
+          animation: fadeIn 1s ease-out;
+        }
+
+        .hover-scale {
+          transition: transform 0.2s;
+        }
+
+        .hover-scale:hover {
+          transform: scale(1.05);
+        }
+
+        .hover-lift {
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .hover-lift:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+        }
+
+        .stat-item {
+          padding: 1rem;
+          background: rgba(255,255,255,0.1);
+          border-radius: 10px;
+        }
+
+        .step-number {
+          width: 40px;
+          height: 40px;
+          background: #4158D0;
+          color: white;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.2rem;
+          margin: 0 auto;
+        }
+
+        .icon-wrapper {
+          width: 80px;
+          height: 80px;
+          background: rgba(13, 110, 253, 0.1);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 };
 
-export default HomePage; 
+export default HomePage;

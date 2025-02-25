@@ -14,7 +14,7 @@ function InfluencerDashboard() {
 
   const fetchBookings = async () => {
     try {
-      const response = await fetch("${process.env.REACT_APP_API_URL}/api/influencer-bookings/");
+      const response = await fetch("http://127.0.0.1:8000/api/influencer-bookings/");
       const data = await response.json();
       setBookings(data);
     } catch (error) {
@@ -24,7 +24,7 @@ function InfluencerDashboard() {
 
   const handleBookingResponse = async (bookingId, status) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/influencer-bookings/${bookingId}/`, {
+      const response = await fetch(`http://127.0.0.1:8000/api/influencer-bookings/${bookingId}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: status }),

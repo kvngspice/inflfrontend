@@ -8,12 +8,12 @@ function CampaignDetail() {
   const [matchedInfluencers, setMatchedInfluencers] = useState([]);
 
   useEffect(() => {
-    fetch(`${process.env.REACT_APP_API_URL}/api/campaigns/${id}`)
+    fetch(`http://127.0.0.1:8000/api/campaigns/${id}`)
       .then((response) => response.json())
       .then((data) => setCampaign(data))
       .catch((error) => console.error("Error fetching campaign details:", error));
 
-    fetch(`${process.env.REACT_APP_API_URL}/api/campaigns/${id}/search-influencers/`)
+    fetch(`http://127.0.0.1:8000/api/campaigns/${id}/search-influencers/`)
       .then((response) => response.json())
       .then((data) => setMatchedInfluencers(data))
       .catch((error) => console.error("Error fetching influencers:", error));

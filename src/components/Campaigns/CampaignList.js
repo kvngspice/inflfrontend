@@ -142,7 +142,8 @@ const CampaignList = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
         },
         body: JSON.stringify(newCampaign)
       });
@@ -185,15 +186,15 @@ const CampaignList = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error('Failed to fetch campaigns');
       }
 
       const data = await response.json();
       setCampaigns(data);
       setError(null);
     } catch (err) {
-      console.error("Error fetching campaigns:", err);
-      setError("Failed to load campaigns");
+      console.error('Error fetching campaigns:', err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -205,7 +206,8 @@ const CampaignList = () => {
       const response = await fetch(`${config.API_URL}/api/campaigns/${campaignToDelete.id}/`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
         }
       });
 
@@ -229,7 +231,7 @@ const CampaignList = () => {
   const fetchCampaignAnalytics = async (campaignId) => {
     try {
       // In production, replace with actual API call
-      // const response = await fetch(`${process.env.REACT_APP_API_URL}/api/campaigns/${campaignId}/analytics/`);
+      // const response = await fetch(`http://127.0.0.1:8000/api/campaigns/${campaignId}/analytics/`);
       // const data = await response.json();
       
       // Mock data for now
@@ -278,7 +280,7 @@ const CampaignList = () => {
   const handleFindInfluencers = async (campaign) => {
     setIsMatching(true);
     try {
-      const response = await fetch(`${config.API_URL}/api/campaigns/${campaign.id}/match-influencers/`, {
+      const response = await fetch(`http://127.0.0.1:8000/api/campaigns/${campaign.id}/match-influencers/`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -302,7 +304,7 @@ const CampaignList = () => {
   // Add the handleBookInfluencer function
   const handleBookInfluencer = async (influencer, campaign) => {
     try {
-      const response = await fetch(`${config.API_URL}/api/bookings/create/`, {
+      const response = await fetch('http://127.0.0.1:8000/api/bookings/create/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
