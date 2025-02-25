@@ -77,19 +77,34 @@ const InfluencerList = () => {
 
   const fetchCampaigns = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/campaigns/', {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch(`${config.API_URL}/api/campaigns/`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
         }
       });
+
       if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          navigate('/login');
+          return;
+        }
         throw new Error('Failed to fetch campaigns');
       }
+
       const data = await response.json();
       setCampaigns(data);
     } catch (err) {
       console.error('Error fetching campaigns:', err);
-      setError(err.message);
+      setError('Failed to load campaigns. Please try again.');
     }
   };
 
@@ -114,7 +129,7 @@ const InfluencerList = () => {
     // Handle both relative and absolute URLs
     const fullUrl = imageUrl.startsWith('http') 
         ? imageUrl 
-        : `http://127.0.0.1:8000${imageUrl}`;
+        : `${config.API_URL}${imageUrl}`;
     
     console.log('Constructed image URL:', fullUrl); // Debug log
     return fullUrl;
@@ -210,58 +225,43 @@ const InfluencerList = () => {
 
   const handleBookingSubmit = async () => {
     try {
-      // Get the selected campaign details
-      const selectedCampaignDetails = campaigns.find(c => c.id === parseInt(selectedCampaign));
-      console.log("Selected campaign:", selectedCampaignDetails);  // Debug log
-      console.log("Selected influencer:", selectedInfluencer);  // Debug log
-      
-      // Check if influencer's base fee exceeds campaign budget
-      if (parseFloat(selectedInfluencer.base_fee) > parseFloat(selectedCampaignDetails.budget)) {
-        console.log("Budget warning triggered:", {  // Debug log
-          baseFee: selectedInfluencer.base_fee,
-          campaignBudget: selectedCampaignDetails.budget
-        });
-        
-        const willProceed = window.confirm(
-          `Warning: This influencer's base fee ($${selectedInfluencer.base_fee}) is above the campaign budget ($${selectedCampaignDetails.budget}). Would you like to proceed anyway?`
-        );
-        
-        if (!willProceed) {
-          return;
-        }
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
       }
 
-      // Proceed with booking
-      const bookingData = {
-        influencer_id: selectedInfluencer.id,
-        campaign_id: selectedCampaign
-      };
-      console.log("Sending booking data:", bookingData);  // Debug log
-
-      const response = await fetch('http://127.0.0.1:8000/api/bookings/create/', {
+      const response = await fetch(`${config.API_URL}/api/bookings/create/`, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify(bookingData)
+        body: JSON.stringify({
+          influencer_id: selectedInfluencer.id,
+          campaign_id: selectedCampaign
+        })
       });
 
-      const data = await response.json();
-      console.log("Booking response:", data);  // Debug log
-
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create booking');
+        if (response.status === 401) {
+          navigate('/login');
+          return;
+        }
+        throw new Error('Failed to create booking');
       }
 
-      alert('Booking created successfully!');
+      const data = await response.json();
       setShowBookingModal(false);
-      setSelectedInfluencer(null);
-      setSelectedCampaign('');
-
+      // Optionally show success message
+      alert('Booking created successfully!');
+      
+      // Refresh the campaigns list
+      await fetchCampaigns();
     } catch (err) {
-      console.error('Booking error:', err);
-      alert(err.message || 'Failed to create booking. Please try again.');
+      console.error('Error creating booking:', err);
+      setError('Failed to create booking. Please try again.');
     }
   };
 
@@ -595,97 +595,3 @@ const InfluencerList = () => {
       </Modal>
 
       <style jsx>{`
-        .influencer-list {
-          padding: 15px;
-        }
-
-        .filters-section {
-          position: sticky;
-          top: 0;
-          background: white;
-          padding: 15px;
-          z-index: 100;
-          border-radius: 8px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .influencer-card {
-          transition: transform 0.2s;
-        }
-
-        .influencer-card:hover {
-          transform: translateY(-5px);
-        }
-
-        .metrics-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-          gap: 10px;
-        }
-
-        @media (max-width: 576px) {
-          .influencer-list {
-            padding: 10px;
-          }
-
-          .filters-section {
-            padding: 10px;
-          }
-
-          .metrics-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-
-        .social-icon-link {
-          padding: 8px;
-          border-radius: 50%;
-          transition: all 0.2s ease;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .social-icon-link:hover {
-          background-color: rgba(0, 0, 0, 0.1);
-          transform: translateY(-2px);
-        }
-
-        .filter-section {
-          transition: all 0.3s ease;
-        }
-
-        @media (max-width: 991.98px) {
-          .filter-section {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 0.25rem;
-            margin-top: 1rem;
-          }
-        }
-
-        .form-control, .form-select {
-          height: 38px;
-        }
-
-        @media (max-width: 991.98px) {
-          .filter-collapse {
-            background: #f8f9fa;
-            margin-top: 1rem;
-          }
-        }
-
-        .form-control:hover, .form-select:hover {
-          border-color: #0d6efd;
-        }
-
-        .form-control:focus, .form-select:focus {
-          border-color: #0d6efd;
-          box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-        }
-      `}</style>
-    </div>
-  );
-};
-
-export default InfluencerList; 
