@@ -32,7 +32,7 @@ const Login = ({ setIsAuthenticated }) => {
 
       if (response.ok && data.token) {
         localStorage.setItem('token', data.token);
-        localStorage.setItem('userRole', data.role);
+        localStorage.setItem('userRole', data.role || 'user');
         setIsAuthenticated(true);
         navigate('/dashboard/campaigns');
       } else {

@@ -1,16 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Nav, OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaBullhorn, FaUsers, FaWallet } from 'react-icons/fa';
+import { FaBullhorn, FaUsers, FaWallet, FaSignOutAlt } from 'react-icons/fa';
 import config from '../config';
 
 const DashboardLayout = ({ children }) => {
   const navigate = useNavigate();
   const [pendingPayments, setPendingPayments] = useState([]);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
     checkPendingPayments();
-  }, []);
+  }, [navigate]);
 
   const checkPendingPayments = async () => {
     try {
@@ -30,6 +37,7 @@ const DashboardLayout = ({ children }) => {
 
       if (!response.ok) {
         if (response.status === 401) {
+          localStorage.removeItem('token'); // Clear invalid token
           navigate('/login');
           return;
         }
@@ -38,8 +46,15 @@ const DashboardLayout = ({ children }) => {
 
       const data = await response.json();
       setPendingPayments(data);
+      setError(null);
     } catch (error) {
       console.error('Error checking pending payments:', error);
+      setError('Failed to load payment information');
+      if (error.message.includes('401')) {
+        navigate('/login');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -65,26 +80,7 @@ const DashboardLayout = ({ children }) => {
           <FaWallet className="me-2" /> 
           <span>Payments</span>
           {count > 0 && (
-            <span 
-              className="notification-badge"
-              style={{
-                position: 'absolute',
-                right: '10px',
-                backgroundColor: '#ff4444',
-                color: 'white',
-                borderRadius: '50%',
-                padding: '2px 6px',
-                fontSize: '0.75rem',
-                minWidth: '20px',
-                height: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                animation: 'pulse 2s infinite'
-              }}
-            >
+            <span className="notification-badge">
               {count}
             </span>
           )}
@@ -94,8 +90,9 @@ const DashboardLayout = ({ children }) => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/login");
+    localStorage.removeItem('token');
+    localStorage.removeItem('userRole');
+    navigate('/login');
   };
 
   return (
@@ -119,20 +116,50 @@ const DashboardLayout = ({ children }) => {
           </Nav.Link>
           {renderPaymentLink()}
           <Nav.Link 
-            className="text-white" 
             onClick={handleLogout}
+            className="text-white mt-auto"
+            style={{ cursor: 'pointer' }}
           >
-            🚪 Logout
+            <FaSignOutAlt className="me-2" /> Logout
           </Nav.Link>
         </Nav>
       </div>
 
       <div className="flex-grow-1 p-4">
+        {error && (
+          <div className="alert alert-danger mb-4">
+            {error}
+            <button 
+              className="btn btn-outline-danger btn-sm ms-3"
+              onClick={checkPendingPayments}
+            >
+              Retry
+            </button>
+          </div>
+        )}
         {children}
       </div>
 
       <style>
         {`
+          .notification-badge {
+            position: absolute;
+            right: 10px;
+            background-color: #ff4444;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 0.75rem;
+            min-width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            animation: pulse 2s infinite;
+          }
+
           @keyframes pulse {
             0% {
               transform: scale(1);
@@ -145,12 +172,19 @@ const DashboardLayout = ({ children }) => {
             }
           }
           
-          .notification-badge {
+          .nav-link {
             transition: all 0.3s ease;
+            border-radius: 8px;
+            margin-bottom: 8px;
           }
           
-          .nav-link:hover .notification-badge {
-            transform: scale(1.1);
+          .nav-link:hover {
+            background-color: rgba(255,255,255,0.1);
+            transform: translateX(5px);
+          }
+
+          .nav-link.active {
+            background-color: rgba(255,255,255,0.2);
           }
         `}
       </style>

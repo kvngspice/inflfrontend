@@ -6,6 +6,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, Cell
 } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 import config from '../../config';
 
 // Add an error boundary component
@@ -98,6 +99,7 @@ const StatusBadge = ({ campaign }) => {
 };
 
 const CampaignList = () => {
+  const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -132,30 +134,42 @@ const CampaignList = () => {
   const [isMatching, setIsMatching] = useState(false);
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
     fetchCampaigns();
-  }, []);
+  }, [navigate]);
 
   const handleCreateCampaign = async (e) => {
     e.preventDefault();
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
       const response = await fetch(`${config.API_URL}/api/campaigns/`, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Accept': 'application/json'
         },
         body: JSON.stringify(newCampaign)
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          navigate('/login');
+          return;
+        }
         throw new Error('Failed to create campaign');
       }
 
-      // Refresh campaigns list
       await fetchCampaigns();
-      
-      // Close modal and reset form
       setShowCreateModal(false);
       setNewCampaign({
         name: '',
@@ -168,7 +182,8 @@ const CampaignList = () => {
         industry: ''
       });
     } catch (err) {
-      setError(err.message);
+      console.error('Error creating campaign:', err);
+      setError('Failed to create campaign. Please try again.');
     }
   };
 
@@ -177,6 +192,11 @@ const CampaignList = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
       const response = await fetch(`${config.API_URL}/api/campaigns/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -186,6 +206,11 @@ const CampaignList = () => {
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('token'); // Clear invalid token
+          navigate('/login');
+          return;
+        }
         throw new Error('Failed to fetch campaigns');
       }
 
@@ -194,7 +219,10 @@ const CampaignList = () => {
       setError(null);
     } catch (err) {
       console.error('Error fetching campaigns:', err);
-      setError(err.message);
+      setError('Failed to load campaigns. Please try again.');
+      if (err.message.includes('401')) {
+        navigate('/login');
+      }
     } finally {
       setLoading(false);
     }
@@ -536,10 +564,28 @@ const CampaignList = () => {
 
   if (loading) {
     return (
-      <Container className="text-center mt-5">
+      <Container className="text-center py-5">
         <Spinner animation="border" role="status">
-          <span className="visually-hidden">Loading campaigns...</span>
+          <span className="visually-hidden">Loading...</span>
         </Spinner>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container className="py-5">
+        <Alert variant="danger">
+          {error}
+          <Button 
+            variant="outline-danger" 
+            size="sm" 
+            className="ms-3"
+            onClick={fetchCampaigns}
+          >
+            Try Again
+          </Button>
+        </Alert>
       </Container>
     );
   }
@@ -553,12 +599,6 @@ const CampaignList = () => {
           Create New Campaign
         </Button>
       </div>
-
-      {error && (
-        <Alert variant="danger" className="mb-4">
-          {error}
-        </Alert>
-      )}
 
       {!loading && campaigns.length === 0 ? (
         <div className="text-center py-5">

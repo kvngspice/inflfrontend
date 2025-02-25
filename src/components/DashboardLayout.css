@@ -1,0 +1,105 @@
+.dashboard-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Desktop Sidebar */
+.sidebar {
+  width: 250px;
+  background-color: #343a40;
+  color: white;
+  padding: 1rem;
+  flex-shrink: 0;
+}
+
+.sidebar .nav-link {
+  color: rgba(255, 255, 255, 0.8);
+  padding: 0.8rem 1rem;
+  margin: 0.2rem 0;
+  border-radius: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.sidebar .nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.sidebar .nav-link.active {
+  background-color: #0d6efd;
+  color: white;
+}
+
+.sidebar .nav-link svg {
+  font-size: 1.2rem;
+}
+
+/* Main Content */
+.main-content {
+  flex-grow: 1;
+  padding: 20px;
+  background-color: #f8f9fa;
+  overflow-y: auto;
+}
+
+/* Mobile Navigation */
+.mobile-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1030;
+}
+
+.mobile-menu-btn {
+  padding: 0.5rem;
+  font-size: 1.25rem;
+}
+
+/* Mobile Sidebar (Offcanvas) */
+.mobile-sidebar {
+  width: 280px !important;
+}
+
+.mobile-sidebar .nav-link {
+  color: #343a40;
+  padding: 1rem;
+  margin: 0.2rem 0;
+  border-radius: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.mobile-sidebar .nav-link:hover {
+  background-color: #f8f9fa;
+}
+
+.mobile-sidebar .nav-link.active {
+  background-color: #0d6efd;
+  color: white;
+}
+
+.mobile-sidebar .nav-link svg {
+  font-size: 1.2rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 991.98px) {
+  .main-content {
+    padding-top: 76px; /* Account for fixed mobile navbar */
+  }
+}
+
+/* Additional Mobile Optimizations */
+@media (max-width: 575.98px) {
+  .mobile-sidebar {
+    width: 100% !important;
+  }
+  
+  .main-content {
+    padding: 76px 15px 15px;
+  }
+}
