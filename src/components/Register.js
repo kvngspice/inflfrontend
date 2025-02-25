@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Container, Form, Button, Alert, Card, Row, Col } from 'react-bootstrap';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaUserPlus, FaEnvelope, FaLock, FaUser, FaBuilding, FaArrowRight } from 'react-icons/fa';
+import config from '../config';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -27,12 +28,18 @@ const Register = () => {
     }
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/auth/register/', {
+      const response = await fetch(`${config.API_URL}/api/auth/register/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          username: formData.username.trim(),
+          email: formData.email.trim(),
+          password: formData.password,
+          role: formData.role
+        })
       });
 
       const data = await response.json();
@@ -40,10 +47,19 @@ const Register = () => {
       if (response.ok) {
         navigate('/login');
       } else {
-        setError(data.error || 'Registration failed');
+        if (data.username) {
+          setError(`Username error: ${data.username.join(', ')}`);
+        } else if (data.email) {
+          setError(`Email error: ${data.email.join(', ')}`);
+        } else if (data.password) {
+          setError(`Password error: ${data.password.join(', ')}`);
+        } else {
+          setError(data.error || 'Registration failed. Please try again.');
+        }
       }
     } catch (err) {
-      setError('Registration failed. Please try again.');
+      console.error('Registration error:', err);
+      setError('Registration failed. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
