@@ -96,4 +96,42 @@
 
 .social-links a:hover svg {
   transform: scale(1.1);
+}
+
+.form-control, .form-select {
+  height: 38px;
+}
+
+@media (max-width: 991.98px) {
+  .filter-collapse {
+    background: #f8f9fa;
+    margin-top: 1rem;
+  }
+}
+
+.form-control:hover, .form-select:hover {
+  border-color: #0d6efd;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.filter-input {
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+  height: 34px !important;
+}
+
+.filter-input::placeholder {
+  font-size: 0.875rem;
+}
+
+.filter-input option {
+  font-size: 0.875rem;
+}
+
+.flex-grow-1 .form-control {
+  height: 38px;
 } 

@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Row, Col, Card, Form, Button, Badge, Pagination, Dropdown, Modal } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import { Row, Col, Card, Form, Button, Badge, Pagination, Dropdown, Modal, Collapse } from 'react-bootstrap';
+import { Link, useNavigate } from 'react-router-dom';
 import { FaInstagram, FaTiktok, FaYoutube, FaTwitter, FaFilter, FaSort, FaStar, FaChartLine, FaExternalLinkAlt, FaUsers } from 'react-icons/fa';
 import InfluencerProfile from './InfluencerProfile';
 import './InfluencerList.css';
 import config from '../../config';
 
 const InfluencerList = () => {
+  const navigate = useNavigate();
   const [influencers, setInfluencers] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -27,15 +28,26 @@ const InfluencerList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [maxBudget, setMaxBudget] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
     fetchInfluencers();
     fetchCampaigns();
-  }, []);
+  }, [navigate]);
 
   const fetchInfluencers = async () => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
       const response = await fetch(`${config.API_URL}/api/influencers/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -43,15 +55,21 @@ const InfluencerList = () => {
           'Content-Type': 'application/json',
         }
       });
+
       if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          navigate('/login');
+          return;
+        }
         throw new Error('Failed to fetch influencers');
       }
+
       const data = await response.json();
-      console.log('Fetched influencers:', data);
       setInfluencers(data);
     } catch (err) {
-      setError(err.message);
       console.error('Error fetching influencers:', err);
+      setError('Failed to load influencers. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -59,11 +77,9 @@ const InfluencerList = () => {
 
   const fetchCampaigns = async () => {
     try {
-      const response = await fetch(`${config.API_URL}/api/campaigns/`, {
+      const response = await fetch('http://127.0.0.1:8000/api/campaigns/', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
       if (!response.ok) {
@@ -194,24 +210,41 @@ const InfluencerList = () => {
 
   const handleBookingSubmit = async () => {
     try {
-      // Check budget compatibility
-      const campaign = campaigns.find(c => c.id === parseInt(selectedCampaign));
-      if (selectedInfluencer.base_rate > campaign.budget) {
-        alert(`Cannot book this influencer. Their base rate ($${selectedInfluencer.base_rate}) exceeds the campaign budget ($${campaign.budget})`);
-        return;
+      // Get the selected campaign details
+      const selectedCampaignDetails = campaigns.find(c => c.id === parseInt(selectedCampaign));
+      console.log("Selected campaign:", selectedCampaignDetails);  // Debug log
+      console.log("Selected influencer:", selectedInfluencer);  // Debug log
+      
+      // Check if influencer's base fee exceeds campaign budget
+      if (parseFloat(selectedInfluencer.base_fee) > parseFloat(selectedCampaignDetails.budget)) {
+        console.log("Budget warning triggered:", {  // Debug log
+          baseFee: selectedInfluencer.base_fee,
+          campaignBudget: selectedCampaignDetails.budget
+        });
+        
+        const willProceed = window.confirm(
+          `Warning: This influencer's base fee ($${selectedInfluencer.base_fee}) is above the campaign budget ($${selectedCampaignDetails.budget}). Would you like to proceed anyway?`
+        );
+        
+        if (!willProceed) {
+          return;
+        }
       }
 
-      const response = await fetch(`${config.API_URL}/api/bookings/create/`, {
+      // Proceed with booking
+      const bookingData = {
+        influencer_id: selectedInfluencer.id,
+        campaign_id: selectedCampaign
+      };
+      console.log("Sending booking data:", bookingData);  // Debug log
+
+      const response = await fetch('http://127.0.0.1:8000/api/bookings/create/', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({
-          influencer_id: selectedInfluencer.id,
-          campaign_id: selectedCampaign
-        })
+        body: JSON.stringify(bookingData)
       });
 
       const data = await response.json();
@@ -286,50 +319,114 @@ const InfluencerList = () => {
         <h2><FaUsers className="me-2" />Influencers</h2>
       </div>
 
-      <div className="filters-section mb-4">
-        <Row className="g-3">
-          <Col xs={12} md={6} lg={3}>
-            <Form.Control
-              type="text"
-              placeholder="Search by name, handle, or niche..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </Col>
-          <Col xs={12} md={6} lg={3}>
-            <Form.Select
-              value={selectedPlatform}
-              onChange={(e) => setSelectedPlatform(e.target.value)}
-            >
-              <option value="">All Platforms</option>
-              <option value="X">X (Twitter)</option>
-              <option value="Instagram">Instagram</option>
-              <option value="TikTok">TikTok</option>
-              <option value="YouTube">YouTube</option>
-            </Form.Select>
-          </Col>
-          <Col xs={12} md={6} lg={3}>
-            <Form.Control
-              type="number"
-              placeholder="Min followers"
-              value={minFollowers}
-              onChange={(e) => setMinFollowers(e.target.value)}
-            />
-          </Col>
-          <Col xs={12} md={6} lg={3}>
-            <Form.Select
-              value={advancedFilters.location}
-              onChange={(e) => setAdvancedFilters(prev => ({ ...prev, location: e.target.value }))}
-            >
-              <option value="">All Regions</option>
-              <option value="Nigeria">Nigeria</option>
-              <option value="Kenya">Kenya</option>
-              <option value="Ghana">Ghana</option>
-              <option value="South Africa">South Africa</option>
-            </Form.Select>
-          </Col>
-          <Col xs={12} md={6} lg={3}>
-            <Form.Group className="mb-3">
+      <div className="d-flex flex-wrap gap-2 mb-3 align-items-center">
+        <div className="flex-grow-1 me-2">
+          <Form.Control
+            type="search"
+            placeholder="Search influencers..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        
+        <div className="d-none d-lg-flex gap-2">
+          <Form.Select 
+            value={selectedPlatform}
+            onChange={(e) => setSelectedPlatform(e.target.value)}
+            style={{ width: '100px' }}
+            className="filter-input"
+          >
+            <option value="">Platform</option>
+            <option value="Instagram">IG</option>
+            <option value="TikTok">TikTok</option>
+            <option value="YouTube">YT</option>
+            <option value="Twitter">Twitter</option>
+          </Form.Select>
+
+          <Form.Control
+            type="number"
+            placeholder="Followers"
+            value={minFollowers}
+            onChange={(e) => setMinFollowers(e.target.value)}
+            style={{ width: '90px' }}
+            className="filter-input"
+          />
+
+          <Form.Select
+            value={advancedFilters.location}
+            onChange={(e) => setAdvancedFilters(prev => ({ ...prev, location: e.target.value }))}
+            style={{ width: '90px' }}
+            className="filter-input"
+          >
+            <option value="">Region</option>
+            <option value="Nigeria">NG</option>
+            <option value="Kenya">KE</option>
+            <option value="Ghana">GH</option>
+            <option value="South Africa">SA</option>
+          </Form.Select>
+
+          <Form.Control
+            type="number"
+            value={maxBudget}
+            onChange={(e) => setMaxBudget(e.target.value)}
+            placeholder="Budget"
+            style={{ width: '80px' }}
+            className="filter-input"
+          />
+        </div>
+
+        <Button 
+          variant="outline-secondary"
+          onClick={() => setShowFilters(!showFilters)}
+          className="d-lg-none"
+          aria-expanded={showFilters}
+        >
+          <FaFilter /> Filters
+        </Button>
+      </div>
+
+      <div className="d-lg-none">
+        <Collapse in={showFilters}>
+          <div className="p-3 border rounded mb-3">
+            <Form.Group className="mb-2">
+              <Form.Label>Platform</Form.Label>
+              <Form.Select
+                value={selectedPlatform}
+                onChange={(e) => setSelectedPlatform(e.target.value)}
+              >
+                <option value="">All Platforms</option>
+                <option value="Instagram">Instagram</option>
+                <option value="TikTok">TikTok</option>
+                <option value="YouTube">YouTube</option>
+                <option value="Twitter">Twitter</option>
+              </Form.Select>
+            </Form.Group>
+
+            <Form.Group className="mb-2">
+              <Form.Label>Minimum Followers</Form.Label>
+              <Form.Control
+                type="number"
+                placeholder="Enter minimum followers"
+                value={minFollowers}
+                onChange={(e) => setMinFollowers(e.target.value)}
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-2">
+              <Form.Label>Region</Form.Label>
+              <Form.Select
+                value={advancedFilters.location}
+                onChange={(e) => setAdvancedFilters(prev => ({ ...prev, location: e.target.value }))}
+              >
+                <option value="">All Regions</option>
+                <option value="Nigeria">Nigeria</option>
+                <option value="Kenya">Kenya</option>
+                <option value="Ghana">Ghana</option>
+                <option value="South Africa">South Africa</option>
+              </Form.Select>
+            </Form.Group>
+
+            <Form.Group className="mb-2">
               <Form.Label>Maximum Budget</Form.Label>
               <Form.Control
                 type="number"
@@ -338,29 +435,8 @@ const InfluencerList = () => {
                 placeholder="Enter maximum budget"
               />
             </Form.Group>
-          </Col>
-        </Row>
-
-        <Row className="mt-3">
-          <Col xs={12} md={6} lg={4}>
-            <Dropdown>
-              <Dropdown.Toggle variant="outline-secondary" className="w-100">
-                <FaSort className="me-2" />Sort By
-              </Dropdown.Toggle>
-              <Dropdown.Menu>
-                <Dropdown.Item onClick={() => { setSortField('followers_count'); setSortDirection('desc'); }}>
-                  Followers (High to Low)
-                </Dropdown.Item>
-                <Dropdown.Item onClick={() => { setSortField('engagement_rate'); setSortDirection('desc'); }}>
-                  Engagement Rate (High to Low)
-                </Dropdown.Item>
-                <Dropdown.Item onClick={() => { setSortField('name'); setSortDirection('asc'); }}>
-                  Name (A-Z)
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-          </Col>
-        </Row>
+          </div>
+        </Collapse>
       </div>
 
       <div className="d-flex justify-content-between align-items-center mb-3">
@@ -573,6 +649,39 @@ const InfluencerList = () => {
         .social-icon-link:hover {
           background-color: rgba(0, 0, 0, 0.1);
           transform: translateY(-2px);
+        }
+
+        .filter-section {
+          transition: all 0.3s ease;
+        }
+
+        @media (max-width: 991.98px) {
+          .filter-section {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.25rem;
+            margin-top: 1rem;
+          }
+        }
+
+        .form-control, .form-select {
+          height: 38px;
+        }
+
+        @media (max-width: 991.98px) {
+          .filter-collapse {
+            background: #f8f9fa;
+            margin-top: 1rem;
+          }
+        }
+
+        .form-control:hover, .form-select:hover {
+          border-color: #0d6efd;
+        }
+
+        .form-control:focus, .form-select:focus {
+          border-color: #0d6efd;
+          box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
         }
       `}</style>
     </div>
