@@ -19,17 +19,13 @@ const Login = ({ setIsAuthenticated }) => {
     setLoading(true);
 
     try {
-      const response = await fetch(`${config.API_URL}/api/auth/login`, {
+      const response = await fetch(`${config.API_URL}/api/auth/login/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({
-          username: formData.username.trim(),
-          password: formData.password
-        }),
-        credentials: 'include'
+        body: JSON.stringify(formData)
       });
 
       const data = await response.json();
@@ -44,7 +40,7 @@ const Login = ({ setIsAuthenticated }) => {
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError('Login failed. Please check your connection and try again.');
+      setError('Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
