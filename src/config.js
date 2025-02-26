@@ -1,8 +1,11 @@
 const config = {
-  API_URL: process.env.REACT_APP_API_URL?.replace(/\/+$/, '') || 'http://localhost:8000'
+  // Use the deployed backend URL
+  API_URL: process.env.NODE_ENV === 'production' 
+    ? 'https://influencer-backend-fmh5.onrender.com'
+    : 'http://localhost:8000'
 };
 
-// Add this for debugging
+console.log('Current environment:', process.env.NODE_ENV);
 console.log('Current API URL:', config.API_URL);
 
 export default config; 

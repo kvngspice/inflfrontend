@@ -269,55 +269,39 @@ const CampaignList = () => {
 
   // Update the calculateMatchPercentage function
   const calculateMatchPercentage = (influencer, campaign) => {
-    // First check if platforms match - this is non-negotiable
-    if (!campaign.platforms || !influencer.platform) return 0;
-    
-    // Convert campaign platforms to lowercase for comparison
-    const campaignPlatforms = campaign.platforms.map(p => p.toLowerCase());
-    const influencerPlatform = influencer.platform.toLowerCase();
-    
-    // If platform doesn't match, return 0 immediately
-    if (!campaignPlatforms.includes(influencerPlatform)) {
+    let score = 0;
+    let totalCriteria = 0;
+
+    // Platform match is required
+    if (!campaign.platforms.includes(influencer.platform)) {
       return 0;
     }
 
-    // If we get here, platforms match, now calculate other criteria
-    let matchPoints = 30; // Start with 30 points for platform match
-    let totalPoints = 30;
+    // Platform match adds 40% to score
+    score += 40;
+    totalCriteria += 40;
 
-    // Budget match (25 points)
+    // Region match adds 20%
+    if (influencer.region === campaign.region) {
+      score += 20;
+      totalCriteria += 20;
+    }
+
+    // Budget match adds 20%
     if (campaign.budget && influencer.base_fee) {
-      totalPoints += 25;
       if (parseFloat(influencer.base_fee) <= parseFloat(campaign.budget)) {
-        matchPoints += 25;
+        score += 20;
+        totalCriteria += 20;
       }
     }
 
-    // Region match (20 points)
-    if (campaign.region && influencer.region) {
-      totalPoints += 20;
-      if (influencer.region.toLowerCase().includes(campaign.region.toLowerCase())) {
-        matchPoints += 20;
-      }
+    // Demographics match adds 20%
+    if (campaign.demography === influencer.primary_demographic) {
+      score += 20;
+      totalCriteria += 20;
     }
 
-    // Demographics match (15 points)
-    if (campaign.demography && influencer.demography) {
-      totalPoints += 15;
-      if (influencer.demography.toLowerCase().includes(campaign.demography.toLowerCase())) {
-        matchPoints += 15;
-      }
-    }
-
-    // Industry/Niche match (10 points)
-    if (campaign.industry && influencer.niche) {
-      totalPoints += 10;
-      if (influencer.niche.toLowerCase().includes(campaign.industry.toLowerCase())) {
-        matchPoints += 10;
-      }
-    }
-
-    return Math.round((matchPoints / totalPoints) * 100);
+    return totalCriteria > 0 ? Math.round((score / totalCriteria) * 100) : 0;
   };
 
   // Update handleFindInfluencers to use stricter filtering
@@ -331,7 +315,8 @@ const CampaignList = () => {
         return;
       }
 
-      const response = await fetch(`${config.API_URL}/api/campaigns/${campaign.id}/match-influencers/`, {
+      // First try the match-influencers endpoint
+      let response = await fetch(`${config.API_URL}/api/campaigns/${campaign.id}/match-influencers/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',
@@ -339,17 +324,42 @@ const CampaignList = () => {
         }
       });
 
+      // If the specific endpoint fails, fall back to filtering all influencers
       if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          navigate('/login');
-          return;
+        response = await fetch(`${config.API_URL}/api/influencers/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          }
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            localStorage.removeItem('token');
+            navigate('/login');
+            return;
+          }
+          throw new Error('Failed to find matching influencers');
         }
-        throw new Error('Failed to find matching influencers');
+
+        const allInfluencers = await response.json();
+        
+        // Filter influencers based on campaign criteria
+        const matchedInfluencers = allInfluencers
+          .map(influencer => ({
+            ...influencer,
+            matchPercentage: calculateMatchPercentage(influencer, campaign)
+          }))
+          .filter(influencer => influencer.matchPercentage > 0)
+          .sort((a, b) => b.matchPercentage - a.matchPercentage);
+
+        setMatchedInfluencers(matchedInfluencers);
+      } else {
+        const data = await response.json();
+        setMatchedInfluencers(data);
       }
 
-      const data = await response.json();
-      setMatchedInfluencers(data);
       setShowMatchModal(true);
     } catch (err) {
       console.error('Error finding influencers:', err);
