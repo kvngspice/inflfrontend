@@ -25,7 +25,11 @@ const Login = ({ setIsAuthenticated }) => {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          username: formData.username.trim(),
+          password: formData.password
+        }),
+        credentials: 'include'
       });
 
       const data = await response.json();
@@ -40,7 +44,7 @@ const Login = ({ setIsAuthenticated }) => {
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError('Login failed. Please try again.');
+      setError('Login failed. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }

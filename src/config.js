@@ -4,5 +4,6 @@ const config = {
 
 // Add this for debugging
 console.log('Current API URL:', config.API_URL);
+console.log('Current environment:', process.env.NODE_ENV);
 
 export default config; 

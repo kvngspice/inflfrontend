@@ -39,7 +39,8 @@ const Register = () => {
           email: formData.email.trim(),
           password: formData.password,
           role: formData.role
-        })
+        }),
+        credentials: 'include'
       });
 
       const data = await response.json();
