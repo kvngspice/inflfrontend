@@ -272,36 +272,44 @@ const CampaignList = () => {
     let score = 0;
     let totalCriteria = 0;
 
-    // Platform match is required
-    if (!campaign.platforms.includes(influencer.platform)) {
+    // Platform match is required (40%)
+    if (!campaign.platforms || !influencer.platform) return 0;
+    
+    const campaignPlatforms = Array.isArray(campaign.platforms) 
+      ? campaign.platforms.map(p => p.toLowerCase())
+      : [campaign.platforms.toLowerCase()];
+    
+    if (!campaignPlatforms.includes(influencer.platform.toLowerCase())) {
       return 0;
     }
-
-    // Platform match adds 40% to score
     score += 40;
     totalCriteria += 40;
 
-    // Region match adds 20%
-    if (influencer.region === campaign.region) {
-      score += 20;
+    // Region match (20%)
+    if (campaign.region && influencer.region) {
+      if (influencer.region.toLowerCase().includes(campaign.region.toLowerCase())) {
+        score += 20;
+      }
       totalCriteria += 20;
     }
 
-    // Budget match adds 20%
+    // Budget match (20%)
     if (campaign.budget && influencer.base_fee) {
       if (parseFloat(influencer.base_fee) <= parseFloat(campaign.budget)) {
         score += 20;
-        totalCriteria += 20;
       }
-    }
-
-    // Demographics match adds 20%
-    if (campaign.demography === influencer.primary_demographic) {
-      score += 20;
       totalCriteria += 20;
     }
 
-    return totalCriteria > 0 ? Math.round((score / totalCriteria) * 100) : 0;
+    // Industry/Niche match (20%)
+    if (campaign.industry && influencer.niche) {
+      if (influencer.niche.toLowerCase().includes(campaign.industry.toLowerCase())) {
+        score += 20;
+      }
+      totalCriteria += 20;
+    }
+
+    return Math.round((score / totalCriteria) * 100);
   };
 
   // Update handleFindInfluencers to use stricter filtering
@@ -315,8 +323,8 @@ const CampaignList = () => {
         return;
       }
 
-      // First try the match-influencers endpoint
-      let response = await fetch(`${config.API_URL}/api/campaigns/${campaign.id}/match-influencers/`, {
+      // First try to get all influencers
+      const response = await fetch(`${config.API_URL}/api/influencers/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',
@@ -324,42 +332,27 @@ const CampaignList = () => {
         }
       });
 
-      // If the specific endpoint fails, fall back to filtering all influencers
       if (!response.ok) {
-        response = await fetch(`${config.API_URL}/api/influencers/`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          }
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            localStorage.removeItem('token');
-            navigate('/login');
-            return;
-          }
-          throw new Error('Failed to find matching influencers');
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          navigate('/login');
+          return;
         }
-
-        const allInfluencers = await response.json();
-        
-        // Filter influencers based on campaign criteria
-        const matchedInfluencers = allInfluencers
-          .map(influencer => ({
-            ...influencer,
-            matchPercentage: calculateMatchPercentage(influencer, campaign)
-          }))
-          .filter(influencer => influencer.matchPercentage > 0)
-          .sort((a, b) => b.matchPercentage - a.matchPercentage);
-
-        setMatchedInfluencers(matchedInfluencers);
-      } else {
-        const data = await response.json();
-        setMatchedInfluencers(data);
+        throw new Error('Failed to fetch influencers');
       }
 
+      const allInfluencers = await response.json();
+      
+      // Filter and match influencers locally
+      const matchedInfluencers = allInfluencers
+        .map(influencer => ({
+          ...influencer,
+          matchPercentage: calculateMatchPercentage(influencer, campaign)
+        }))
+        .filter(influencer => influencer.matchPercentage > 0)
+        .sort((a, b) => b.matchPercentage - a.matchPercentage);
+
+      setMatchedInfluencers(matchedInfluencers);
       setShowMatchModal(true);
     } catch (err) {
       console.error('Error finding influencers:', err);
@@ -611,7 +604,9 @@ const CampaignList = () => {
       size="lg"
     >
       <Modal.Header closeButton>
-        <Modal.Title>Matching Influencers for {campaign?.name}</Modal.Title>
+        <Modal.Title>
+          Matching Influencers for {selectedCampaign?.name}
+        </Modal.Title>
       </Modal.Header>
       <Modal.Body>
         {isMatching ? (
@@ -640,22 +635,14 @@ const CampaignList = () => {
                         {influencer.matchPercentage}% Match
                       </Badge>
                     </div>
-                    <div className="mt-2">
-                      <small className="text-muted">
-                        <strong>Region:</strong> {influencer.region}<br/>
-                        <strong>Niche:</strong> {influencer.niche}<br/>
-                        <strong>Base Fee:</strong> ${influencer.base_fee}
-                      </small>
-                    </div>
-                    <div className="mt-3">
-                      <Button 
-                        variant="primary" 
-                        size="sm"
-                        onClick={() => handleBookInfluencer(influencer, campaign)}
-                      >
-                        Book Now
-                      </Button>
-                    </div>
+                    <Button 
+                      variant="primary" 
+                      size="sm"
+                      className="mt-2"
+                      onClick={() => handleBookInfluencer(influencer, selectedCampaign)}
+                    >
+                      Book Now
+                    </Button>
                   </Card.Body>
                 </Card>
               </Col>
@@ -832,24 +819,22 @@ const CampaignList = () => {
                     )}
                   </div>
 
-                  <div className="mt-3">
-                    <Button 
-                      variant="outline-primary" 
-                      size="sm" 
-                      className="me-2"
+                  <div className="mt-3 d-flex justify-content-between">
+                    <Button
+                      variant="outline-primary"
+                      size="sm"
                       onClick={() => handleViewDetails(campaign)}
                     >
                       View Details
                     </Button>
-                    {!campaign.is_assigned && (
-                      <Button 
-                        variant="outline-success" 
-                        size="sm"
-                        onClick={() => handleFindInfluencers(campaign)}
-                      >
-                        Find Influencers
-                      </Button>
-                    )}
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => handleFindInfluencers(campaign)}
+                      disabled={isMatching}
+                    >
+                      {isMatching ? 'Finding...' : 'Find Influencers'}
+                    </Button>
                   </div>
                 </Card.Body>
               </Card>
