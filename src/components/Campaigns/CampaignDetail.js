@@ -1,28 +1,68 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams } from 'react-router-dom';
-import { Container, Row, Col, Card } from 'react-bootstrap';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Container, Row, Col, Card, Spinner, Alert } from 'react-bootstrap';
 import Chart from 'chart.js/auto';
+import config from '../../config';
 
 function CampaignDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [campaign, setCampaign] = useState(null);
   const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
 
   useEffect(() => {
-    // Fetch campaign details
-    fetch(`http://127.0.0.1:8000/api/campaigns/${id}/`)
-      .then((response) => response.json())
-      .then((data) => setCampaign(data))
-      .catch((error) => console.error("Error fetching campaign:", error));
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
 
-    // Fetch analytics data
-    fetch(`http://127.0.0.1:8000/api/campaigns/${id}/analytics/`)
-      .then((response) => response.json())
-      .then((data) => setAnalytics(data))
-      .catch((error) => console.error("Error fetching analytics:", error));
-  }, [id]);
+    const fetchData = async () => {
+      try {
+        const [campaignRes, analyticsRes] = await Promise.all([
+          fetch(`${config.API_URL}/api/campaigns/${id}/`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json'
+            }
+          }),
+          fetch(`${config.API_URL}/api/campaigns/${id}/analytics/`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json'
+            }
+          })
+        ]);
+
+        if (!campaignRes.ok || !analyticsRes.ok) {
+          if (campaignRes.status === 401 || analyticsRes.status === 401) {
+            navigate('/login');
+            return;
+          }
+          throw new Error('Failed to fetch campaign data');
+        }
+
+        const [campaignData, analyticsData] = await Promise.all([
+          campaignRes.json(),
+          analyticsRes.json()
+        ]);
+
+        setCampaign(campaignData);
+        setAnalytics(analyticsData);
+      } catch (err) {
+        console.error('Error fetching campaign data:', err);
+        setError('Failed to load campaign data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [id, navigate]);
 
   useEffect(() => {
     if (analytics && chartRef.current) {
@@ -73,10 +113,18 @@ function CampaignDetail() {
     };
   }, [analytics]);
 
-  if (!campaign || !analytics) {
+  if (loading) {
     return (
       <Container>
         <div>Loading campaign details...</div>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container>
+        <Alert variant="danger">{error}</Alert>
       </Container>
     );
   }

@@ -8,6 +8,7 @@ import {
 } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import config from '../../config';
+import './CampaignList.css';
 
 // Add an error boundary component
 class ChartErrorBoundary extends React.Component {
@@ -129,8 +130,8 @@ const CampaignList = () => {
   const [analyticsData, setAnalyticsData] = useState(null);
 
   // Add state for influencer matching
-  const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedInfluencers, setMatchedInfluencers] = useState([]);
+  const [showMatchModal, setShowMatchModal] = useState(false);
   const [isMatching, setIsMatching] = useState(false);
 
   useEffect(() => {
@@ -154,9 +155,9 @@ const CampaignList = () => {
       const response = await fetch(`${config.API_URL}/api/campaigns/`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
         },
         body: JSON.stringify(newCampaign)
       });
@@ -188,10 +189,9 @@ const CampaignList = () => {
   };
 
   const fetchCampaigns = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const token = localStorage.getItem('token');
-      
       if (!token) {
         navigate('/login');
         return;
@@ -201,13 +201,13 @@ const CampaignList = () => {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         }
       });
 
       if (!response.ok) {
         if (response.status === 401) {
-          localStorage.removeItem('token'); // Clear invalid token
+          localStorage.removeItem('token');
           navigate('/login');
           return;
         }
@@ -216,13 +216,9 @@ const CampaignList = () => {
 
       const data = await response.json();
       setCampaigns(data);
-      setError(null);
     } catch (err) {
       console.error('Error fetching campaigns:', err);
       setError('Failed to load campaigns. Please try again.');
-      if (err.message.includes('401')) {
-        navigate('/login');
-      }
     } finally {
       setLoading(false);
     }
@@ -231,11 +227,10 @@ const CampaignList = () => {
   // Add delete handler
   const handleDeleteCampaign = async () => {
     try {
-      const response = await fetch(`${config.API_URL}/api/campaigns/${campaignToDelete.id}/`, {
+      const response = await fetch(`http://127.0.0.1:8000/api/campaigns/${campaignToDelete.id}/`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Accept': 'application/json'
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
 
@@ -297,66 +292,132 @@ const CampaignList = () => {
     }
   };
 
-  // Add function to handle view details click
-  const handleViewDetails = (campaign) => {
-    setSelectedCampaign(campaign);
-    fetchCampaignAnalytics(campaign.id);
-    setShowAnalyticsModal(true);
+  // Update the calculateMatchPercentage function
+  const calculateMatchPercentage = (influencer, campaign) => {
+    // First check if platforms match - this is non-negotiable
+    if (!campaign.platforms || !influencer.platform) return 0;
+    
+    // Convert campaign platforms to lowercase for comparison
+    const campaignPlatforms = campaign.platforms.map(p => p.toLowerCase());
+    const influencerPlatform = influencer.platform.toLowerCase();
+    
+    // If platform doesn't match, return 0 immediately
+    if (!campaignPlatforms.includes(influencerPlatform)) {
+      return 0;
+    }
+
+    // If we get here, platforms match, now calculate other criteria
+    let matchPoints = 30; // Start with 30 points for platform match
+    let totalPoints = 30;
+
+    // Budget match (25 points)
+    if (campaign.budget && influencer.base_fee) {
+      totalPoints += 25;
+      if (parseFloat(influencer.base_fee) <= parseFloat(campaign.budget)) {
+        matchPoints += 25;
+      }
+    }
+
+    // Region match (20 points)
+    if (campaign.region && influencer.region) {
+      totalPoints += 20;
+      if (influencer.region.toLowerCase().includes(campaign.region.toLowerCase())) {
+        matchPoints += 20;
+      }
+    }
+
+    // Demographics match (15 points)
+    if (campaign.demography && influencer.demography) {
+      totalPoints += 15;
+      if (influencer.demography.toLowerCase().includes(campaign.demography.toLowerCase())) {
+        matchPoints += 15;
+      }
+    }
+
+    // Industry/Niche match (10 points)
+    if (campaign.industry && influencer.niche) {
+      totalPoints += 10;
+      if (influencer.niche.toLowerCase().includes(campaign.industry.toLowerCase())) {
+        matchPoints += 10;
+      }
+    }
+
+    return Math.round((matchPoints / totalPoints) * 100);
   };
 
-  // Add the handleFindInfluencers function
+  // Update handleFindInfluencers to use stricter filtering
   const handleFindInfluencers = async (campaign) => {
     setIsMatching(true);
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/campaigns/${campaign.id}/match-influencers/`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      setSelectedCampaign(campaign);
+      const response = await fetch('http://127.0.0.1:8000/api/influencers/');
+      const influencers = await response.json();
 
-      if (!response.ok) {
-        throw new Error('Failed to find matching influencers');
-      }
+      // Filter and sort influencers by match percentage
+      const matchedInfluencers = influencers
+        .map(influencer => ({
+          ...influencer,
+          matchPercentage: calculateMatchPercentage(influencer, campaign)
+        }))
+        // Only include influencers with a match percentage > 0 (meaning platform matches)
+        .filter(influencer => influencer.matchPercentage > 0)
+        .sort((a, b) => b.matchPercentage - a.matchPercentage);
 
-      const data = await response.json();
-      setMatchedInfluencers(data);
+      setMatchedInfluencers(matchedInfluencers);
       setShowMatchModal(true);
-    } catch (err) {
-      setError(err.message);
-      console.error('Error finding influencers:', err);
+    } catch (error) {
+      console.error('Error finding influencers:', error);
+      alert('Failed to find matching influencers');
     } finally {
       setIsMatching(false);
     }
   };
 
-  // Add the handleBookInfluencer function
+  // Update the handleBookInfluencer function
   const handleBookInfluencer = async (influencer, campaign) => {
     try {
+      if (!campaign || !influencer) {
+        throw new Error('Missing campaign or influencer data');
+      }
+
+      // First check if influencer's base fee exceeds campaign budget
+      if (campaign.budget && influencer.base_fee) {
+        if (parseFloat(influencer.base_fee) > parseFloat(campaign.budget)) {
+          const willProceed = window.confirm(
+            `Warning: This influencer's base fee ($${influencer.base_fee}) is above the campaign budget ($${campaign.budget}). Would you like to proceed anyway?`
+          );
+          
+          if (!willProceed) {
+            return;
+          }
+        }
+      }
+
+      const bookingData = {
+        influencer_id: influencer.id,
+        campaign_id: campaign.id
+      };
+
+      console.log("Sending booking data:", bookingData);
+
       const response = await fetch('http://127.0.0.1:8000/api/bookings/create/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({
-          influencer_id: influencer.id,
-          campaign_id: campaign.id
-        })
+        body: JSON.stringify(bookingData)
       });
 
       const data = await response.json();
+      console.log("Booking response:", data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create booking');
       }
 
-      // Show success message
-      alert('Influencer booked successfully!');
-      
-      // Refresh campaign list to update status
+      alert('Booking created successfully! Waiting for admin approval.');
       await fetchCampaigns();
-      
-      // Close the modal
       setShowMatchModal(false);
 
     } catch (err) {
@@ -366,143 +427,195 @@ const CampaignList = () => {
   };
 
   // Update the AnalyticsModal component
-  const AnalyticsModal = () => {
+  const AnalyticsModal = ({ campaign, show, onHide, analyticsData }) => {
     const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
-
+    
     return (
-      <Modal show={showAnalyticsModal} onHide={() => setShowAnalyticsModal(false)} size="xl">
+      <Modal show={show} onHide={onHide} size="lg">
         <Modal.Header closeButton>
-          <Modal.Title>Campaign Analytics: {selectedCampaign?.name}</Modal.Title>
+          <Modal.Title>Campaign Details - {campaign?.name}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {analyticsData ? (
-            <div>
-              {/* Key Metrics */}
-              <Row className="mb-4">
-                <Col md={3}>
-                  <Card className="text-center">
-                    <Card.Body>
+          {/* Existing Analytics Section */}
+          <div className="mb-4">
+            <h5>Campaign Analytics</h5>
+            {analyticsData && analyticsData.keyMetrics ? (
+              <>
+                {/* Keep existing analytics content */}
+                <Row className="mb-4">
+                  <Col md={3}>
+                    <div className="text-center">
                       <h6>Total Reach</h6>
-                      <h3>{analyticsData.keyMetrics.totalReach}</h3>
-                    </Card.Body>
-                  </Card>
-                </Col>
-                <Col md={3}>
-                  <Card className="text-center">
-                    <Card.Body>
-                      <h6>Avg. Engagement</h6>
-                      <h3>{analyticsData.keyMetrics.avgEngagement}</h3>
-                    </Card.Body>
-                  </Card>
-                </Col>
-                <Col md={3}>
-                  <Card className="text-center">
-                    <Card.Body>
-                      <h6>Conversions</h6>
-                      <h3>{analyticsData.keyMetrics.totalConversions}</h3>
-                    </Card.Body>
-                  </Card>
-                </Col>
-                <Col md={3}>
-                  <Card className="text-center">
-                    <Card.Body>
-                      <h6>ROI</h6>
-                      <h3>{analyticsData.keyMetrics.roi}</h3>
-                    </Card.Body>
-                  </Card>
-                </Col>
-              </Row>
-
-              {/* Engagement Timeline */}
-              <Card className="mb-4">
-                <Card.Body>
-                  <h5>Engagement Timeline</h5>
-                  <ChartErrorBoundary>
-                    <div style={{ width: '100%', height: 300 }}>
-                      <ResponsiveContainer>
-                        <LineChart data={analyticsData.engagementStats.timeline}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="date" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Line type="monotone" dataKey="likes" stroke="#8884d8" />
-                          <Line type="monotone" dataKey="comments" stroke="#82ca9d" />
-                          <Line type="monotone" dataKey="shares" stroke="#ffc658" />
-                        </LineChart>
-                      </ResponsiveContainer>
+                      <div className="h4">{analyticsData.keyMetrics.totalReach}</div>
                     </div>
-                  </ChartErrorBoundary>
-                </Card.Body>
-              </Card>
+                  </Col>
+                  <Col md={3}>
+                    <div className="text-center">
+                      <h6>Avg. Engagement</h6>
+                      <div className="h4">{analyticsData.keyMetrics.avgEngagement}</div>
+                    </div>
+                  </Col>
+                  <Col md={3}>
+                    <div className="text-center">
+                      <h6>Conversions</h6>
+                      <div className="h4">{analyticsData.keyMetrics.totalConversions}</div>
+                    </div>
+                  </Col>
+                  <Col md={3}>
+                    <div className="text-center">
+                      <h6>ROI</h6>
+                      <div className="h4">{analyticsData.keyMetrics.roi}</div>
+                    </div>
+                  </Col>
+                </Row>
 
-              <Row>
-                {/* Audience Demographics */}
-                <Col md={6}>
-                  <Card>
+                {/* Only show charts if we have the data */}
+                {analyticsData.engagementStats && (
+                  <Card className="mb-4">
                     <Card.Body>
-                      <h5>Audience Demographics</h5>
+                      <h5>Engagement Timeline</h5>
                       <ChartErrorBoundary>
                         <div style={{ width: '100%', height: 300 }}>
                           <ResponsiveContainer>
-                            <PieChart>
-                              <Pie
-                                data={analyticsData.audienceDemographics}
-                                dataKey="value"
-                                nameKey="name"
-                                cx="50%"
-                                cy="50%"
-                                outerRadius={100}
-                                label
-                              >
-                                {analyticsData.audienceDemographics.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                              </Pie>
-                              <Tooltip />
-                              <Legend />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </ChartErrorBoundary>
-                    </Card.Body>
-                  </Card>
-                </Col>
-
-                {/* Performance Metrics */}
-                <Col md={6}>
-                  <Card>
-                    <Card.Body>
-                      <h5>Performance Metrics</h5>
-                      <ChartErrorBoundary>
-                        <div style={{ width: '100%', height: 300 }}>
-                          <ResponsiveContainer>
-                            <BarChart data={analyticsData.performanceMetrics}>
+                            <LineChart data={analyticsData.engagementStats.timeline}>
                               <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="name" />
+                              <XAxis dataKey="date" />
                               <YAxis />
                               <Tooltip />
                               <Legend />
-                              <Bar dataKey="reach" fill="#8884d8" />
-                              <Bar dataKey="engagement" fill="#82ca9d" />
-                              <Bar dataKey="conversions" fill="#ffc658" />
-                            </BarChart>
+                              <Line type="monotone" dataKey="likes" stroke="#8884d8" />
+                              <Line type="monotone" dataKey="comments" stroke="#82ca9d" />
+                              <Line type="monotone" dataKey="shares" stroke="#ffc658" />
+                            </LineChart>
                           </ResponsiveContainer>
                         </div>
                       </ChartErrorBoundary>
                     </Card.Body>
                   </Card>
-                </Col>
-              </Row>
-            </div>
-          ) : (
-            <div className="text-center py-5">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Loading...</span>
+                )}
+
+                <Row>
+                  {analyticsData.audienceDemographics && (
+                    <Col md={6}>
+                      <Card>
+                        <Card.Body>
+                          <h5>Audience Demographics</h5>
+                          <ChartErrorBoundary>
+                            <div style={{ width: '100%', height: 300 }}>
+                              <ResponsiveContainer>
+                                <PieChart>
+                                  <Pie
+                                    data={analyticsData.audienceDemographics}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="50%"
+                                    outerRadius={100}
+                                    label
+                                  >
+                                    {analyticsData.audienceDemographics.map((entry, index) => (
+                                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                  </Pie>
+                                  <Tooltip />
+                                  <Legend />
+                                </PieChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </ChartErrorBoundary>
+                        </Card.Body>
+                      </Card>
+                    </Col>
+                  )}
+
+                  {analyticsData.performanceMetrics && (
+                    <Col md={6}>
+                      <Card>
+                        <Card.Body>
+                          <h5>Performance Metrics</h5>
+                          <ChartErrorBoundary>
+                            <div style={{ width: '100%', height: 300 }}>
+                              <ResponsiveContainer>
+                                <BarChart data={analyticsData.performanceMetrics}>
+                                  <CartesianGrid strokeDasharray="3 3" />
+                                  <XAxis dataKey="name" />
+                                  <YAxis />
+                                  <Tooltip />
+                                  <Legend />
+                                  <Bar dataKey="reach" fill="#8884d8" />
+                                  <Bar dataKey="engagement" fill="#82ca9d" />
+                                  <Bar dataKey="conversions" fill="#ffc658" />
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </ChartErrorBoundary>
+                        </Card.Body>
+                      </Card>
+                    </Col>
+                  )}
+                </Row>
+              </>
+            ) : (
+              <p className="text-muted">Analytics data not available yet</p>
+            )}
+          </div>
+
+          {/* Influencers Section */}
+          <div className="mt-4">
+            <h5>Assigned Influencers</h5>
+            {campaign?.bookings && campaign.bookings.length > 0 ? (
+              <div className="influencer-list">
+                {campaign.bookings.map(booking => (
+                  <Card key={booking.id} className="mb-3">
+                    <Card.Body>
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div>
+                          <h6>{booking.influencer?.name}</h6>
+                          <div className="text-muted small">
+                            <span className="me-3">
+                              <i className="fas fa-hashtag"></i> {booking.influencer?.platform}
+                            </span>
+                            <span className="me-3">
+                              <i className="fas fa-users"></i> {booking.influencer?.followers_count?.toLocaleString()} followers
+                            </span>
+                          </div>
+                        </div>
+                        <div>
+                          <Badge 
+                            bg={
+                              booking.status === 'paid' ? 'success' :
+                              booking.status === 'approved' ? 'info' :
+                              booking.status === 'pending' ? 'warning' : 'secondary'
+                            }
+                          >
+                            {booking.status?.charAt(0).toUpperCase() + booking.status?.slice(1)}
+                          </Badge>
+                        </div>
+                      </div>
+                      {booking.payment_status && (
+                        <div className="mt-2 small">
+                          <strong>Payment Status:</strong>{' '}
+                          <span className={`text-${booking.payment_status === 'completed' ? 'success' : 'warning'}`}>
+                            {booking.payment_status.charAt(0).toUpperCase() + booking.payment_status.slice(1)}
+                          </span>
+                        </div>
+                      )}
+                    </Card.Body>
+                  </Card>
+                ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <Alert variant="info">
+                No influencers are currently assigned to this campaign.
+              </Alert>
+            )}
+          </div>
         </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={onHide}>
+            Close
+          </Button>
+        </Modal.Footer>
       </Modal>
     );
   };
@@ -526,66 +639,95 @@ const CampaignList = () => {
               <Col md={6} key={influencer.id} className="mb-3">
                 <Card>
                   <Card.Body>
-                    <div className="d-flex align-items-center mb-3">
-                      <img
-                        src={influencer.profile_picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(influencer.name)}`}
-                        alt={influencer.name}
-                        className="rounded-circle me-3"
-                        style={{ width: '50px', height: '50px', objectFit: 'cover' }}
-                      />
+                    <div className="d-flex justify-content-between align-items-start">
                       <div>
-                        <h5 className="mb-0">{influencer.name}</h5>
-                        <div className="text-muted">@{influencer.social_media_handle}</div>
+                        <Card.Title>{influencer.name}</Card.Title>
+                        <Card.Subtitle className="mb-2 text-muted">
+                          {influencer.platform} • {influencer.followers_count.toLocaleString()} followers
+                        </Card.Subtitle>
                       </div>
+                      <Badge 
+                        bg={influencer.matchPercentage >= 80 ? 'success' : 
+                           influencer.matchPercentage >= 60 ? 'warning' : 'danger'}
+                      >
+                        {influencer.matchPercentage}% Match
+                      </Badge>
                     </div>
-                    <div className="mb-2">
-                      <Badge bg="primary" className="me-2">{influencer.platform}</Badge>
-                      <Badge bg="secondary">{influencer.followers_count} followers</Badge>
+                    <div className="mt-2">
+                      <small className="text-muted">
+                        <strong>Region:</strong> {influencer.region}<br/>
+                        <strong>Niche:</strong> {influencer.niche}<br/>
+                        <strong>Base Fee:</strong> ${influencer.base_fee}
+                      </small>
                     </div>
-                    <Button 
-                      variant="success" 
-                      size="sm" 
-                      className="w-100"
-                      onClick={() => handleBookInfluencer(influencer, campaign)}
-                    >
-                      Book Influencer
-                    </Button>
+                    <div className="mt-3">
+                      <Button 
+                        variant="primary" 
+                        size="sm"
+                        onClick={() => handleBookInfluencer(influencer, campaign)}
+                      >
+                        Book Now
+                      </Button>
+                    </div>
                   </Card.Body>
                 </Card>
               </Col>
             ))}
           </Row>
         ) : (
-          <p className="text-center">No matching influencers found.</p>
+          <Alert variant="info">
+            No matching influencers found for this campaign's requirements.
+          </Alert>
         )}
       </Modal.Body>
     </Modal>
   );
 
+  // Update the getCampaignStatus function
+  const getCampaignStatus = (campaign) => {
+    if (campaign.bookings && campaign.bookings.length > 0) {
+      // Check if any booking is paid
+      const hasPaidBooking = campaign.bookings.some(booking => booking.status === 'paid');
+      if (hasPaidBooking) {
+        return { text: 'Active', variant: 'success' };
+      }
+      
+      // Check if any booking is approved
+      const hasApprovedBooking = campaign.bookings.some(booking => booking.status === 'approved');
+      if (hasApprovedBooking) {
+        return { text: 'Pending Payment', variant: 'info' };
+      }
+      
+      // Check if any booking is pending approval
+      const hasPendingBooking = campaign.bookings.some(booking => booking.status === 'pending');
+      if (hasPendingBooking) {
+        return { text: 'Pending Approval', variant: 'warning' };
+      }
+
+      // Check if all bookings are rejected
+      const allRejected = campaign.bookings.every(booking => booking.status === 'rejected');
+      if (allRejected) {
+        return { text: 'Pending Assignment', variant: 'secondary' };
+      }
+    }
+    
+    // Default status for campaigns without bookings
+    return { text: 'Pending Assignment', variant: 'secondary' };
+  };
+
+  // Add function to handle view details click
+  const handleViewDetails = async (campaign) => {
+    setSelectedCampaign(campaign);
+    fetchCampaignAnalytics(campaign.id);
+    setShowAnalyticsModal(true);
+  };
+
   if (loading) {
     return (
-      <Container className="text-center py-5">
+      <Container className="text-center mt-5">
         <Spinner animation="border" role="status">
-          <span className="visually-hidden">Loading...</span>
+          <span className="visually-hidden">Loading campaigns...</span>
         </Spinner>
-      </Container>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container className="py-5">
-        <Alert variant="danger">
-          {error}
-          <Button 
-            variant="outline-danger" 
-            size="sm" 
-            className="ms-3"
-            onClick={fetchCampaigns}
-          >
-            Try Again
-          </Button>
-        </Alert>
       </Container>
     );
   }
@@ -599,6 +741,12 @@ const CampaignList = () => {
           Create New Campaign
         </Button>
       </div>
+
+      {error && (
+        <Alert variant="danger" className="mb-4">
+          {error}
+        </Alert>
+      )}
 
       {!loading && campaigns.length === 0 ? (
         <div className="text-center py-5">
@@ -628,7 +776,9 @@ const CampaignList = () => {
                     <div>
                       <Card.Title>{campaign.name}</Card.Title>
                       <div className="mb-2">
-                        <StatusBadge campaign={campaign} />
+                        <Badge bg={getCampaignStatus(campaign).variant} className="me-2">
+                          {getCampaignStatus(campaign).text}
+                        </Badge>
                       </div>
                     </div>
                     <Button 
@@ -917,7 +1067,7 @@ const CampaignList = () => {
       </Modal>
 
       {/* Add Analytics Modal */}
-      <AnalyticsModal />
+      <AnalyticsModal campaign={selectedCampaign} show={showAnalyticsModal} onHide={() => setShowAnalyticsModal(false)} analyticsData={analyticsData} />
 
       {/* Add the MatchingModal component */}
       <MatchingModal campaign={selectedCampaign} />

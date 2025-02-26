@@ -1,13 +1,12 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Row, Col, Card, Form, Button, Badge, Pagination, Dropdown, Modal, Collapse } from 'react-bootstrap';
-import { Link, useNavigate } from 'react-router-dom';
+import { Row, Col, Card, Form, Button, Badge, Pagination, Dropdown, Modal } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
 import { FaInstagram, FaTiktok, FaYoutube, FaTwitter, FaFilter, FaSort, FaStar, FaChartLine, FaExternalLinkAlt, FaUsers } from 'react-icons/fa';
 import InfluencerProfile from './InfluencerProfile';
 import './InfluencerList.css';
 import config from '../../config';
 
 const InfluencerList = () => {
-  const navigate = useNavigate();
   const [influencers, setInfluencers] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -27,27 +26,15 @@ const InfluencerList = () => {
   const [selectedCampaign, setSelectedCampaign] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [maxBudget, setMaxBudget] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/login');
-      return;
-    }
     fetchInfluencers();
     fetchCampaigns();
-  }, [navigate]);
+  }, []);
 
   const fetchInfluencers = async () => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
       const response = await fetch(`${config.API_URL}/api/influencers/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -57,19 +44,14 @@ const InfluencerList = () => {
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          navigate('/login');
-          return;
-        }
-        throw new Error('Failed to fetch influencers');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
       setInfluencers(data);
-    } catch (err) {
-      console.error('Error fetching influencers:', err);
-      setError('Failed to load influencers. Please try again.');
+    } catch (error) {
+      console.error("Error fetching influencers:", error);
+      setError("Failed to load influencers");
     } finally {
       setLoading(false);
     }
@@ -78,11 +60,6 @@ const InfluencerList = () => {
   const fetchCampaigns = async () => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
       const response = await fetch(`${config.API_URL}/api/campaigns/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -92,19 +69,13 @@ const InfluencerList = () => {
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          navigate('/login');
-          return;
-        }
-        throw new Error('Failed to fetch campaigns');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-
       const data = await response.json();
       setCampaigns(data);
     } catch (err) {
       console.error('Error fetching campaigns:', err);
-      setError('Failed to load campaigns. Please try again.');
+      setError('Failed to load campaigns');
     }
   };
 
@@ -120,19 +91,10 @@ const InfluencerList = () => {
   };
 
   const getProfileImage = (imageUrl, name) => {
-    console.log('Raw image URL received:', imageUrl); // Debug log
-
     if (!imageUrl) {
-        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=200`;
+      return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
     }
-
-    // Handle both relative and absolute URLs
-    const fullUrl = imageUrl.startsWith('http') 
-        ? imageUrl 
-        : `${config.API_URL}${imageUrl}`;
-    
-    console.log('Constructed image URL:', fullUrl); // Debug log
-    return fullUrl;
+    return imageUrl;
   };
 
   const filterInfluencers = useCallback(() => {
@@ -176,13 +138,6 @@ const InfluencerList = () => {
       );
     }
 
-    // Filter by maximum budget
-    if (maxBudget) {
-      results = results.filter(influencer => 
-        parseFloat(influencer.base_fee) <= parseFloat(maxBudget)
-      );
-    }
-
     // Sort results
     if (sortField) {
       results.sort((a, b) => {
@@ -203,7 +158,7 @@ const InfluencerList = () => {
     }
 
     return results;
-  }, [influencers, searchQuery, selectedPlatform, minFollowers, advancedFilters, sortField, sortDirection, maxBudget]);
+  }, [influencers, searchQuery, selectedPlatform, minFollowers, advancedFilters, sortField, sortDirection]);
 
   const filteredAndSortedInfluencers = useMemo(() => {
     let filtered = filterInfluencers();
@@ -218,50 +173,38 @@ const InfluencerList = () => {
   };
 
   const handleBookNow = (influencer) => {
-    console.log("Starting booking process for influencer:", influencer);  // Debug log
     setSelectedInfluencer(influencer);
     setShowBookingModal(true);
   };
 
   const handleBookingSubmit = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
+      const bookingData = {
+        influencer_id: selectedInfluencer.id,
+        campaign_id: selectedCampaign
+      };
+      
       const response = await fetch(`${config.API_URL}/api/bookings/create/`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({
-          influencer_id: selectedInfluencer.id,
-          campaign_id: selectedCampaign
-        })
+        body: JSON.stringify(bookingData)
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          navigate('/login');
-          return;
-        }
         throw new Error('Failed to create booking');
       }
 
       const data = await response.json();
-      setShowBookingModal(false);
-      // Optionally show success message
       alert('Booking created successfully!');
-      
-      // Refresh the campaigns list
-      await fetchCampaigns();
+      setShowBookingModal(false);
+      setSelectedInfluencer(null);
+      setSelectedCampaign('');
     } catch (err) {
-      console.error('Error creating booking:', err);
-      setError('Failed to create booking. Please try again.');
+      console.error('Booking error:', err);
+      alert('Failed to create booking. Please try again.');
     }
   };
 
@@ -319,124 +262,70 @@ const InfluencerList = () => {
         <h2><FaUsers className="me-2" />Influencers</h2>
       </div>
 
-      <div className="d-flex flex-wrap gap-2 mb-3 align-items-center">
-        <div className="flex-grow-1 me-2">
-          <Form.Control
-            type="search"
-            placeholder="Search influencers..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        
-        <div className="d-none d-lg-flex gap-2">
-          <Form.Select 
-            value={selectedPlatform}
-            onChange={(e) => setSelectedPlatform(e.target.value)}
-            style={{ width: '100px' }}
-            className="filter-input"
-          >
-            <option value="">Platform</option>
-            <option value="Instagram">IG</option>
-            <option value="TikTok">TikTok</option>
-            <option value="YouTube">YT</option>
-            <option value="Twitter">Twitter</option>
-          </Form.Select>
+      <div className="filters-section mb-4">
+        <Row className="g-3">
+          <Col xs={12} md={6} lg={3}>
+            <Form.Control
+              type="text"
+              placeholder="Search by name, handle, or niche..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </Col>
+          <Col xs={12} md={6} lg={3}>
+            <Form.Select
+              value={selectedPlatform}
+              onChange={(e) => setSelectedPlatform(e.target.value)}
+            >
+              <option value="">All Platforms</option>
+              <option value="X">X (Twitter)</option>
+              <option value="Instagram">Instagram</option>
+              <option value="TikTok">TikTok</option>
+              <option value="YouTube">YouTube</option>
+            </Form.Select>
+          </Col>
+          <Col xs={12} md={6} lg={3}>
+            <Form.Control
+              type="number"
+              placeholder="Min followers"
+              value={minFollowers}
+              onChange={(e) => setMinFollowers(e.target.value)}
+            />
+          </Col>
+          <Col xs={12} md={6} lg={3}>
+            <Form.Select
+              value={advancedFilters.location}
+              onChange={(e) => setAdvancedFilters(prev => ({ ...prev, location: e.target.value }))}
+            >
+              <option value="">All Regions</option>
+              <option value="Nigeria">Nigeria</option>
+              <option value="Kenya">Kenya</option>
+              <option value="Ghana">Ghana</option>
+              <option value="South Africa">South Africa</option>
+            </Form.Select>
+          </Col>
+        </Row>
 
-          <Form.Control
-            type="number"
-            placeholder="Followers"
-            value={minFollowers}
-            onChange={(e) => setMinFollowers(e.target.value)}
-            style={{ width: '90px' }}
-            className="filter-input"
-          />
-
-          <Form.Select
-            value={advancedFilters.location}
-            onChange={(e) => setAdvancedFilters(prev => ({ ...prev, location: e.target.value }))}
-            style={{ width: '90px' }}
-            className="filter-input"
-          >
-            <option value="">Region</option>
-            <option value="Nigeria">NG</option>
-            <option value="Kenya">KE</option>
-            <option value="Ghana">GH</option>
-            <option value="South Africa">SA</option>
-          </Form.Select>
-
-          <Form.Control
-            type="number"
-            value={maxBudget}
-            onChange={(e) => setMaxBudget(e.target.value)}
-            placeholder="Budget"
-            style={{ width: '80px' }}
-            className="filter-input"
-          />
-        </div>
-
-        <Button 
-          variant="outline-secondary"
-          onClick={() => setShowFilters(!showFilters)}
-          className="d-lg-none"
-          aria-expanded={showFilters}
-        >
-          <FaFilter /> Filters
-        </Button>
-      </div>
-
-      <div className="d-lg-none">
-        <Collapse in={showFilters}>
-          <div className="p-3 border rounded mb-3">
-            <Form.Group className="mb-2">
-              <Form.Label>Platform</Form.Label>
-              <Form.Select
-                value={selectedPlatform}
-                onChange={(e) => setSelectedPlatform(e.target.value)}
-              >
-                <option value="">All Platforms</option>
-                <option value="Instagram">Instagram</option>
-                <option value="TikTok">TikTok</option>
-                <option value="YouTube">YouTube</option>
-                <option value="Twitter">Twitter</option>
-              </Form.Select>
-            </Form.Group>
-
-            <Form.Group className="mb-2">
-              <Form.Label>Minimum Followers</Form.Label>
-              <Form.Control
-                type="number"
-                placeholder="Enter minimum followers"
-                value={minFollowers}
-                onChange={(e) => setMinFollowers(e.target.value)}
-              />
-            </Form.Group>
-
-            <Form.Group className="mb-2">
-              <Form.Label>Region</Form.Label>
-              <Form.Select
-                value={advancedFilters.location}
-                onChange={(e) => setAdvancedFilters(prev => ({ ...prev, location: e.target.value }))}
-              >
-                <option value="">All Regions</option>
-                <option value="Nigeria">Nigeria</option>
-                <option value="Kenya">Kenya</option>
-                <option value="Ghana">Ghana</option>
-                <option value="South Africa">South Africa</option>
-              </Form.Select>
-            </Form.Group>
-
-            <Form.Group className="mb-2">
-              <Form.Label>Maximum Budget</Form.Label>
-              <Form.Control
-                type="number"
-                value={maxBudget}
-                onChange={(e) => setMaxBudget(e.target.value)}
-                placeholder="Enter maximum budget"
-              />
-            </Form.Group>
-          </div>
-        </Collapse>
+        <Row className="mt-3">
+          <Col xs={12} md={6} lg={4}>
+            <Dropdown>
+              <Dropdown.Toggle variant="outline-secondary" className="w-100">
+                <FaSort className="me-2" />Sort By
+              </Dropdown.Toggle>
+              <Dropdown.Menu>
+                <Dropdown.Item onClick={() => { setSortField('followers_count'); setSortDirection('desc'); }}>
+                  Followers (High to Low)
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => { setSortField('engagement_rate'); setSortDirection('desc'); }}>
+                  Engagement Rate (High to Low)
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => { setSortField('name'); setSortDirection('asc'); }}>
+                  Name (A-Z)
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+          </Col>
+        </Row>
       </div>
 
       <div className="d-flex justify-content-between align-items-center mb-3">
@@ -466,7 +355,6 @@ const InfluencerList = () => {
                     className="rounded-circle mb-2 mb-sm-0 me-sm-3"
                     style={{ width: '60px', height: '60px', objectFit: 'cover' }}
                     onError={(e) => {
-                      console.log('Image failed to load:', e.target.src);
                       e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(influencer.name)}&size=60`;
                     }}
                   />
@@ -504,19 +392,16 @@ const InfluencerList = () => {
                   </div>
                 </div>
 
-                <div className="d-flex justify-content-between align-items-center">
-                  <Button
-                    variant="outline-primary"
-                    size="sm"
+                <div className="d-flex justify-content-between">
+                  <Button 
+                    variant="outline-primary" 
+                    size="sm" 
                     onClick={() => handleViewProfile(influencer)}
+                    className="me-2"
                   >
                     View Profile
                   </Button>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => handleBookNow(influencer)}
-                  >
+                  <Button variant="success" size="sm" onClick={() => handleBookNow(influencer)}>
                     Book Now
                   </Button>
                 </div>
@@ -544,13 +429,18 @@ const InfluencerList = () => {
         show={showProfile}
         onHide={() => setShowProfile(false)}
         size="lg"
+        centered
+        dialogClassName="profile-modal"
       >
         <Modal.Header closeButton>
           <Modal.Title>Influencer Profile</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {selectedInfluencer && (
-            <InfluencerProfile influencerId={selectedInfluencer.id} />
+            <InfluencerProfile 
+              influencerId={selectedInfluencer.id} 
+              onClose={() => setShowProfile(false)}
+            />
           )}
         </Modal.Body>
       </Modal>
@@ -560,23 +450,27 @@ const InfluencerList = () => {
           <Modal.Title>Book Influencer</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Form>
-            <Form.Group>
-              <Form.Label>Select Campaign</Form.Label>
-              <Form.Select
+          {selectedInfluencer && (
+            <>
+              <h5>{selectedInfluencer.name}</h5>
+              <p>Select Campaign:</p>
+              <Form.Select 
                 value={selectedCampaign}
                 onChange={(e) => setSelectedCampaign(e.target.value)}
                 required
               >
-                <option value="">Choose a campaign...</option>
+                <option value="">Select a campaign</option>
                 {campaigns.map(campaign => (
                   <option key={campaign.id} value={campaign.id}>
-                    {campaign.name} (Budget: ${campaign.budget})
+                    {campaign.name} - {campaign.industry} ({campaign.budget})
                   </option>
                 ))}
               </Form.Select>
-            </Form.Group>
-          </Form>
+              {campaigns.length === 0 && (
+                <p className="text-muted mt-2">No campaigns available. Please create a campaign first.</p>
+              )}
+            </>
+          )}
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowBookingModal(false)}>
@@ -585,14 +479,71 @@ const InfluencerList = () => {
           <Button 
             variant="primary" 
             onClick={handleBookingSubmit}
-            disabled={!selectedCampaign}
+            disabled={!selectedCampaign || campaigns.length === 0}
           >
             Confirm Booking
           </Button>
         </Modal.Footer>
       </Modal>
+
+      <style jsx>{`        .influencer-list {
+          padding: 15px;
+        }
+
+        .filters-section {
+          position: sticky;
+          top: 0;
+          background: white;
+          padding: 15px;
+          z-index: 100;
+          border-radius: 8px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .influencer-card {
+          transition: transform 0.2s;
+        }
+
+        .influencer-card:hover {
+          transform: translateY(-5px);
+        }
+
+        .metrics-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+          gap: 10px;
+        }
+
+        @media (max-width: 576px) {
+          .influencer-list {
+            padding: 10px;
+          }
+
+          .filters-section {
+            padding: 10px;
+          }
+
+          .metrics-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        .social-icon-link {
+          padding: 8px;
+          border-radius: 50%;
+          transition: all 0.2s ease;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .social-icon-link:hover {
+          background-color: rgba(0, 0, 0, 0.1);
+          transform: translateY(-2px);
+        }
+      `}</style>
     </div>
   );
 };
 
-export default InfluencerList;
+export default InfluencerList; 
