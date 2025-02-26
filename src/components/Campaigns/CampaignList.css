@@ -1,48 +1,12 @@
-.hover-card {
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.hover-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
-}
-
-.campaign-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 1rem;
-  margin: 1rem 0;
-}
-
-.stat-item {
-  text-align: center;
-  padding: 0.5rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-}
-
-.stat-item small {
-  color: #6c757d;
-  display: block;
-  margin-bottom: 0.25rem;
-}
-
-.stat-item strong {
-  color: #212529;
-  font-size: 1.1rem;
-}
-
 .assigned-influencer {
   background-color: #f8f9fa;
   transition: all 0.2s ease;
   border-radius: 6px;
   margin-top: 10px;
-  padding: 0.75rem;
 }
 
 .assigned-influencer:hover {
   background-color: #e9ecef;
-  transform: translateX(5px);
 }
 
 .influencer-stats {
@@ -69,18 +33,4 @@
 .booking-status {
   font-size: 0.8rem;
   padding: 4px 8px;
-}
-
-@media (max-width: 768px) {
-  .campaign-stats {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .stat-item {
-    padding: 0.25rem;
-  }
-
-  .stat-item strong {
-    font-size: 1rem;
-  }
 } 

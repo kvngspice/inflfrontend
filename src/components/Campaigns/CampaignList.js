@@ -6,9 +6,8 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, Cell
 } from 'recharts';
-import { useNavigate } from 'react-router-dom';
-import config from '../../config';
 import './CampaignList.css';
+import config from '../../config';
 
 // Add an error boundary component
 class ChartErrorBoundary extends React.Component {
@@ -100,7 +99,6 @@ const StatusBadge = ({ campaign }) => {
 };
 
 const CampaignList = () => {
-  const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -135,42 +133,29 @@ const CampaignList = () => {
   const [isMatching, setIsMatching] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/login');
-      return;
-    }
     fetchCampaigns();
-  }, [navigate]);
+  }, []);
 
   const handleCreateCampaign = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
       const response = await fetch(`${config.API_URL}/api/campaigns/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify(newCampaign)
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          navigate('/login');
-          return;
-        }
         throw new Error('Failed to create campaign');
       }
 
+      // Refresh campaigns list
       await fetchCampaigns();
+      
+      // Close modal and reset form
       setShowCreateModal(false);
       setNewCampaign({
         name: '',
@@ -183,42 +168,29 @@ const CampaignList = () => {
         industry: ''
       });
     } catch (err) {
-      console.error('Error creating campaign:', err);
-      setError('Failed to create campaign. Please try again.');
+      setError(err.message);
     }
   };
 
   const fetchCampaigns = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
       const response = await fetch(`${config.API_URL}/api/campaigns/`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          navigate('/login');
-          return;
-        }
         throw new Error('Failed to fetch campaigns');
       }
 
       const data = await response.json();
+      console.log('Fetched campaigns:', data); // Debug log
       setCampaigns(data);
     } catch (err) {
+      setError(err.message);
       console.error('Error fetching campaigns:', err);
-      setError('Failed to load campaigns. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -227,7 +199,7 @@ const CampaignList = () => {
   // Add delete handler
   const handleDeleteCampaign = async () => {
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/campaigns/${campaignToDelete.id}/`, {
+      const response = await fetch(`${config.API_URL}/api/campaigns/${campaignToDelete.id}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
