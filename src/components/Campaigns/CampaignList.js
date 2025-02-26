@@ -8,6 +8,7 @@ import {
 } from 'recharts';
 import './CampaignList.css';
 import config from '../../config';
+import { useNavigate } from 'react-router-dom';
 
 // Add an error boundary component
 class ChartErrorBoundary extends React.Component {
@@ -131,6 +132,8 @@ const CampaignList = () => {
   const [matchedInfluencers, setMatchedInfluencers] = useState([]);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [isMatching, setIsMatching] = useState(false);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchCampaigns();
@@ -320,26 +323,37 @@ const CampaignList = () => {
   // Update handleFindInfluencers to use stricter filtering
   const handleFindInfluencers = async (campaign) => {
     setIsMatching(true);
+    setSelectedCampaign(campaign);
     try {
-      setSelectedCampaign(campaign);
-      const response = await fetch('http://127.0.0.1:8000/api/influencers/');
-      const influencers = await response.json();
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
 
-      // Filter and sort influencers by match percentage
-      const matchedInfluencers = influencers
-        .map(influencer => ({
-          ...influencer,
-          matchPercentage: calculateMatchPercentage(influencer, campaign)
-        }))
-        // Only include influencers with a match percentage > 0 (meaning platform matches)
-        .filter(influencer => influencer.matchPercentage > 0)
-        .sort((a, b) => b.matchPercentage - a.matchPercentage);
+      const response = await fetch(`${config.API_URL}/api/campaigns/${campaign.id}/match-influencers/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        }
+      });
 
-      setMatchedInfluencers(matchedInfluencers);
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          navigate('/login');
+          return;
+        }
+        throw new Error('Failed to find matching influencers');
+      }
+
+      const data = await response.json();
+      setMatchedInfluencers(data);
       setShowMatchModal(true);
-    } catch (error) {
-      console.error('Error finding influencers:', error);
-      alert('Failed to find matching influencers');
+    } catch (err) {
+      console.error('Error finding influencers:', err);
+      setError('Failed to find matching influencers. Please try again.');
     } finally {
       setIsMatching(false);
     }
@@ -348,53 +362,40 @@ const CampaignList = () => {
   // Update the handleBookInfluencer function
   const handleBookInfluencer = async (influencer, campaign) => {
     try {
-      if (!campaign || !influencer) {
-        throw new Error('Missing campaign or influencer data');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
       }
 
-      // First check if influencer's base fee exceeds campaign budget
-      if (campaign.budget && influencer.base_fee) {
-        if (parseFloat(influencer.base_fee) > parseFloat(campaign.budget)) {
-          const willProceed = window.confirm(
-            `Warning: This influencer's base fee ($${influencer.base_fee}) is above the campaign budget ($${campaign.budget}). Would you like to proceed anyway?`
-          );
-          
-          if (!willProceed) {
-            return;
-          }
-        }
-      }
-
-      const bookingData = {
-        influencer_id: influencer.id,
-        campaign_id: campaign.id
-      };
-
-      console.log("Sending booking data:", bookingData);
-
-      const response = await fetch('http://127.0.0.1:8000/api/bookings/create/', {
+      const response = await fetch(`${config.API_URL}/api/bookings/create/`, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify(bookingData)
+        body: JSON.stringify({
+          influencer_id: influencer.id,
+          campaign_id: campaign.id
+        })
       });
 
-      const data = await response.json();
-      console.log("Booking response:", data);
-
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create booking');
+        if (response.status === 401) {
+          navigate('/login');
+          return;
+        }
+        throw new Error('Failed to create booking');
       }
 
-      alert('Booking created successfully! Waiting for admin approval.');
+      // Refresh campaigns list after successful booking
       await fetchCampaigns();
       setShowMatchModal(false);
-
+      alert('Booking created successfully!');
     } catch (err) {
       console.error('Error booking influencer:', err);
-      alert(err.message || 'Failed to create booking. Please try again.');
+      setError('Failed to book influencer. Please try again.');
     }
   };
 
@@ -594,16 +595,20 @@ const CampaignList = () => {
 
   // Add the Matching Modal component
   const MatchingModal = ({ campaign }) => (
-    <Modal show={showMatchModal} onHide={() => setShowMatchModal(false)} size="lg">
+    <Modal 
+      show={showMatchModal} 
+      onHide={() => setShowMatchModal(false)}
+      size="lg"
+    >
       <Modal.Header closeButton>
         <Modal.Title>Matching Influencers for {campaign?.name}</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         {isMatching ? (
-          <div className="text-center py-5">
-            <div className="spinner-border text-primary" role="status">
+          <div className="text-center py-4">
+            <Spinner animation="border" role="status">
               <span className="visually-hidden">Finding influencers...</span>
-            </div>
+            </Spinner>
           </div>
         ) : matchedInfluencers.length > 0 ? (
           <Row>
@@ -611,10 +616,10 @@ const CampaignList = () => {
               <Col md={6} key={influencer.id} className="mb-3">
                 <Card>
                   <Card.Body>
-                    <div className="d-flex justify-content-between align-items-start">
+                    <div className="d-flex justify-content-between align-items-center mb-2">
                       <div>
-                        <Card.Title>{influencer.name}</Card.Title>
-                        <Card.Subtitle className="mb-2 text-muted">
+                        <Card.Title className="mb-0">{influencer.name}</Card.Title>
+                        <Card.Subtitle className="text-muted">
                           {influencer.platform} • {influencer.followers_count.toLocaleString()} followers
                         </Card.Subtitle>
                       </div>
