@@ -23,24 +23,44 @@ const Login = ({ setIsAuthenticated }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Origin': window.location.origin
         },
-        body: JSON.stringify(formData)
+        credentials: 'include',
+        body: JSON.stringify({
+          username: formData.username.trim(),
+          password: formData.password
+        })
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
 
-      if (response.ok && data.token) {
+      if (response.ok && data?.token) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('userRole', data.role || 'user');
         setIsAuthenticated(true);
         navigate('/dashboard/campaigns');
       } else {
-        setError(data.error || 'Login failed. Please check your credentials.');
+        // Handle specific error messages
+        if (data?.detail) {
+          setError(data.detail);
+        } else if (data?.error) {
+          setError(data.error);
+        } else if (response.status === 400) {
+          setError('Invalid username or password');
+        } else if (response.status === 403) {
+          setError('Access denied. Please check your credentials.');
+        } else {
+          setError('Login failed. Please try again.');
+        }
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError('Login failed. Please try again.');
+      if (err.name === 'SyntaxError') {
+        setError('Server error. Please try again later.');
+      } else {
+        setError('Network error. Please check your connection.');
+      }
     } finally {
       setLoading(false);
     }
