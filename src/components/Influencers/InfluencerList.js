@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Row, Col, Card, Form, Button, Badge, Pagination, Dropdown, Modal } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import { Row, Col, Card, Form, Button, Badge, Pagination, Dropdown, Modal, Collapse } from 'react-bootstrap';
+import { Link, useNavigate } from 'react-router-dom';
 import { FaInstagram, FaTiktok, FaYoutube, FaTwitter, FaFilter, FaSort, FaStar, FaChartLine, FaExternalLinkAlt, FaUsers } from 'react-icons/fa';
 import InfluencerProfile from './InfluencerProfile';
 import './InfluencerList.css';
@@ -26,6 +26,7 @@ const InfluencerList = () => {
   const [selectedCampaign, setSelectedCampaign] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchInfluencers();
@@ -35,6 +36,11 @@ const InfluencerList = () => {
   const fetchInfluencers = async () => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
       const response = await fetch(`${config.API_URL}/api/influencers/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -44,14 +50,19 @@ const InfluencerList = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          navigate('/login');
+          return;
+        }
+        throw new Error('Failed to fetch influencers');
       }
 
       const data = await response.json();
       setInfluencers(data);
-    } catch (error) {
-      console.error("Error fetching influencers:", error);
-      setError("Failed to load influencers");
+    } catch (err) {
+      console.error('Error fetching influencers:', err);
+      setError('Failed to load influencers. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -179,32 +190,38 @@ const InfluencerList = () => {
 
   const handleBookingSubmit = async () => {
     try {
-      const bookingData = {
-        influencer_id: selectedInfluencer.id,
-        campaign_id: selectedCampaign
-      };
-      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
       const response = await fetch(`${config.API_URL}/api/bookings/create/`, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify(bookingData)
+        body: JSON.stringify({
+          influencer_id: selectedInfluencer.id,
+          campaign_id: selectedCampaign
+        })
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          navigate('/login');
+          return;
+        }
         throw new Error('Failed to create booking');
       }
 
-      const data = await response.json();
-      alert('Booking created successfully!');
       setShowBookingModal(false);
-      setSelectedInfluencer(null);
-      setSelectedCampaign('');
+      alert('Booking created successfully!');
     } catch (err) {
-      console.error('Booking error:', err);
-      alert('Failed to create booking. Please try again.');
+      console.error('Error creating booking:', err);
+      setError('Failed to create booking. Please try again.');
     }
   };
 
