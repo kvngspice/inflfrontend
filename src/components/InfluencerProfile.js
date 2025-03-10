@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Badge, Spinner, Alert } from 'react-bootstrap';
+import config from '../config';
 
 const InfluencerProfile = ({ influencerId, onClose }) => {
   const [profile, setProfile] = useState(null);
@@ -9,7 +10,7 @@ const InfluencerProfile = ({ influencerId, onClose }) => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await fetch(`http://127.0.0.1:8000/api/influencers/${influencerId}/profile/`);
+        const response = await fetch(`${config.API_URL}/api/influencers/${influencerId}/profile/`);
         if (!response.ok) {
           throw new Error('Failed to fetch profile');
         }
@@ -35,14 +36,14 @@ const InfluencerProfile = ({ influencerId, onClose }) => {
 
     // Handle different URL formats
     if (imageUrl.startsWith('/media/')) {
-      return `http://127.0.0.1:8000${imageUrl}`;
+      return `${config.API_URL}${imageUrl}`;
     }
 
     if (imageUrl.startsWith('http')) {
       return imageUrl;
     }
 
-    return `http://127.0.0.1:8000/media/${imageUrl}`;
+    return `${config.API_URL}/media/${imageUrl}`;
   };
 
   if (loading) {
