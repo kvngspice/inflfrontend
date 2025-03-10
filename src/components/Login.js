@@ -20,10 +20,13 @@ const Login = ({ setIsAuthenticated }) => {
     setLoading(true);
 
     try {
+      console.log('Logging in with API URL:', `${config.API_URL}/api/auth/login/`);
+      
       const response = await fetch(`${config.API_URL}/api/auth/login/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
           username: formData.username,
@@ -32,7 +35,9 @@ const Login = ({ setIsAuthenticated }) => {
         })
       });
 
+      console.log('Login response status:', response.status);
       const data = await response.json();
+      console.log('Login response data:', data);
       
       if (!response.ok) {
         // Handle specific error for role mismatch

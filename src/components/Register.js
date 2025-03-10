@@ -29,15 +29,19 @@ const Register = () => {
     }
 
     try {
+      console.log('Registering with API URL:', `${config.API_URL}/api/auth/register/`);
+      
       const response = await fetch(`${config.API_URL}/api/auth/register/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify(formData)
       });
 
       const data = await response.json();
+      console.log('Registration response:', data);
 
       if (response.ok) {
         navigate('/login');
@@ -45,6 +49,7 @@ const Register = () => {
         setError(data.error || 'Registration failed');
       }
     } catch (err) {
+      console.error('Registration error:', err);
       setError('Registration failed. Please try again.');
     } finally {
       setLoading(false);
