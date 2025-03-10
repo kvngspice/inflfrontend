@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Form, Button, Card, Row, Col, Alert, Spinner } from 'react-bootstrap';
 import { FaUser, FaInstagram, FaTiktok, FaYoutube, FaTwitter } from 'react-icons/fa';
+import config from '../../config';
 
 const InfluencerProfileSetup = ({ onComplete }) => {
   const [formData, setFormData] = useState({
@@ -65,7 +66,9 @@ const InfluencerProfileSetup = ({ onComplete }) => {
         }
       });
       
-      const response = await fetch('http://127.0.0.1:8000/api/influencers/profile/setup/', {
+      console.log('Submitting profile to:', `${config.API_URL}/api/influencers/profile/setup/`);
+      
+      const response = await fetch(`${config.API_URL}/api/influencers/profile/setup/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
