@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Badge, Button, Modal, Form, Spinner, Alert } from 'react-bootstrap';
-import { FaBullhorn, FaUsers, FaCalendar, FaDollarSign, FaPlus, FaTrash, FaCheckCircle } from 'react-icons/fa';
+import { Container, Row, Col, Card, Badge, Button, Modal, Form, Spinner, Alert, InputGroup } from 'react-bootstrap';
+import { FaBullhorn, FaUsers, FaCalendar, FaDollarSign, FaPlus, FaTrash, FaCheckCircle, FaInstagram, FaTiktok, FaYoutube, FaTwitter } from 'react-icons/fa';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -8,7 +8,6 @@ import {
 } from 'recharts';
 import './CampaignList.css';
 import config from '../../config';
-import { useNavigate } from 'react-router-dom';
 
 // Add an error boundary component
 class ChartErrorBoundary extends React.Component {
@@ -53,7 +52,8 @@ const CAMPAIGN_OBJECTIVES = [
   'Event Promotion',
   'App Downloads',
   'Website Traffic',
-  'Market Research'
+  'Market Research',
+  'Music Promotion'
 ];
 
 const REGIONS = {
@@ -111,10 +111,12 @@ const CampaignList = () => {
     objective: '',
     platforms: [],
     budget: '',
-    demography: '18-24',
+    demography: '',
+    demographics: [],
     gender: 'Male',
-    region: 'Nigeria',
-    industry: ''
+    region: '',
+    industry: '',
+    brief: ''
   });
   const [otherIndustry, setOtherIndustry] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('');
@@ -133,7 +135,11 @@ const CampaignList = () => {
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [isMatching, setIsMatching] = useState(false);
 
-  const navigate = useNavigate();
+  // Add new state for form submission
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Add this state for form errors
+  const [formError, setFormError] = useState(null);
 
   useEffect(() => {
     fetchCampaigns();
@@ -141,37 +147,104 @@ const CampaignList = () => {
 
   const handleCreateCampaign = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    setFormError(null);
+    
     try {
+      // Validate required fields
+      const requiredFields = [
+        { field: 'name', message: 'Campaign name is required' },
+        { field: 'objective', message: 'Campaign objective is required' },
+        { field: 'industry', message: 'Industry is required' },
+        { field: 'budget', message: 'Budget is required' },
+        { field: 'region', message: 'Region is required' }
+      ];
+      
+      for (const { field, message } of requiredFields) {
+        if (!newCampaign[field]) {
+          setFormError(message);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      
+      // Make sure platforms is not empty
+      if (!newCampaign.platforms || newCampaign.platforms.length === 0) {
+        setFormError("Please select at least one platform");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Create a formatted platforms_text string
+      const platformsText = Array.isArray(newCampaign.platforms) ? newCampaign.platforms.join(', ') : '';
+      
+      // Fix gender value - convert "Both" to a valid value accepted by the backend
+      let genderValue = newCampaign.gender;
+      if (genderValue === 'Both') {
+        genderValue = 'All';
+      }
+      
+      // Prepare campaign data with all required fields
+      const campaignData = {
+        name: newCampaign.name,
+        objective: newCampaign.objective,
+        platforms: newCampaign.platforms,
+        platforms_text: platformsText,
+        budget: parseFloat(newCampaign.budget) || 0,
+        demography: newCampaign.demographics?.length > 0 ? newCampaign.demographics[0] : "18-24",
+        gender: genderValue,
+        region: newCampaign.region,
+        industry: newCampaign.industry,
+        duration: "30",
+        content_requirements: newCampaign.brief || "",
+        target_metrics: {
+          engagement_rate: 0,
+          followers_range: {
+            min: 1000,
+            max: 100000
+          }
+        },
+        deliverables: []
+      };
+      
+      console.log("Sending campaign data:", campaignData);
+      
       const response = await fetch(`${config.API_URL}/api/campaigns/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify(newCampaign)
+        body: JSON.stringify(campaignData)
       });
 
       if (!response.ok) {
         throw new Error('Failed to create campaign');
       }
 
-      // Refresh campaigns list
-      await fetchCampaigns();
+      const data = await response.json();
+      console.log("Created campaign:", data);
       
-      // Close modal and reset form
+      await fetchCampaigns();
       setShowCreateModal(false);
       setNewCampaign({
         name: '',
         objective: '',
         platforms: [],
         budget: '',
-        demography: '18-24',
+        demography: '',
+        demographics: [],
         gender: 'Male',
-        region: 'Nigeria',
-        industry: ''
+        region: '',
+        industry: '',
+        brief: ''
       });
+      
     } catch (err) {
-      setError(err.message);
+      console.error("Error creating campaign:", err);
+      setFormError(err.message || "An unexpected error occurred");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -269,94 +342,80 @@ const CampaignList = () => {
 
   // Update the calculateMatchPercentage function
   const calculateMatchPercentage = (influencer, campaign) => {
-    let score = 0;
-    let totalCriteria = 0;
-
-    // Platform match is required (40%)
+    // First check if platforms match - this is non-negotiable
     if (!campaign.platforms || !influencer.platform) return 0;
     
-    const campaignPlatforms = Array.isArray(campaign.platforms) 
-      ? campaign.platforms.map(p => p.toLowerCase())
-      : [campaign.platforms.toLowerCase()];
+    // Convert campaign platforms to lowercase for comparison
+    const campaignPlatforms = campaign.platforms.map(p => p.toLowerCase());
+    const influencerPlatform = influencer.platform.toLowerCase();
     
-    if (!campaignPlatforms.includes(influencer.platform.toLowerCase())) {
+    // If platform doesn't match, return 0 immediately
+    if (!campaignPlatforms.includes(influencerPlatform)) {
       return 0;
     }
-    score += 40;
-    totalCriteria += 40;
 
-    // Region match (20%)
-    if (campaign.region && influencer.region) {
-      if (influencer.region.toLowerCase().includes(campaign.region.toLowerCase())) {
-        score += 20;
-      }
-      totalCriteria += 20;
-    }
+    // If we get here, platforms match, now calculate other criteria
+    let matchPoints = 30; // Start with 30 points for platform match
+    let totalPoints = 30;
 
-    // Budget match (20%)
+    // Budget match (25 points)
     if (campaign.budget && influencer.base_fee) {
+      totalPoints += 25;
       if (parseFloat(influencer.base_fee) <= parseFloat(campaign.budget)) {
-        score += 20;
+        matchPoints += 25;
       }
-      totalCriteria += 20;
     }
 
-    // Industry/Niche match (20%)
+    // Region match (20 points)
+    if (campaign.region && influencer.region) {
+      totalPoints += 20;
+      if (influencer.region.toLowerCase().includes(campaign.region.toLowerCase())) {
+        matchPoints += 20;
+      }
+    }
+
+    // Demographics match (15 points)
+    if (campaign.demography && influencer.demography) {
+      totalPoints += 15;
+      if (influencer.demography.toLowerCase().includes(campaign.demography.toLowerCase())) {
+        matchPoints += 15;
+      }
+    }
+
+    // Industry/Niche match (10 points)
     if (campaign.industry && influencer.niche) {
+      totalPoints += 10;
       if (influencer.niche.toLowerCase().includes(campaign.industry.toLowerCase())) {
-        score += 20;
+        matchPoints += 10;
       }
-      totalCriteria += 20;
     }
 
-    return Math.round((score / totalCriteria) * 100);
+    return Math.round((matchPoints / totalPoints) * 100);
   };
 
   // Update handleFindInfluencers to use stricter filtering
   const handleFindInfluencers = async (campaign) => {
     setIsMatching(true);
-    setSelectedCampaign(campaign);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
+      setSelectedCampaign(campaign);
+      const response = await fetch(`${config.API_URL}/api/influencers/`);
+      const influencers = await response.json();
 
-      // First try to get all influencers
-      const response = await fetch(`${config.API_URL}/api/influencers/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          navigate('/login');
-          return;
-        }
-        throw new Error('Failed to fetch influencers');
-      }
-
-      const allInfluencers = await response.json();
-      
-      // Filter and match influencers locally
-      const matchedInfluencers = allInfluencers
+      // Filter and sort influencers by match percentage
+      const matchedInfluencers = influencers
         .map(influencer => ({
           ...influencer,
           matchPercentage: calculateMatchPercentage(influencer, campaign)
         }))
+        // Only include influencers with a match percentage > 0 (meaning platform matches)
         .filter(influencer => influencer.matchPercentage > 0)
         .sort((a, b) => b.matchPercentage - a.matchPercentage);
 
       setMatchedInfluencers(matchedInfluencers);
       setShowMatchModal(true);
-    } catch (err) {
-      console.error('Error finding influencers:', err);
-      setError('Failed to find matching influencers. Please try again.');
+    } catch (error) {
+      console.error('Error finding influencers:', error);
+      alert('Failed to find matching influencers');
     } finally {
       setIsMatching(false);
     }
@@ -365,40 +424,53 @@ const CampaignList = () => {
   // Update the handleBookInfluencer function
   const handleBookInfluencer = async (influencer, campaign) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
+      if (!campaign || !influencer) {
+        throw new Error('Missing campaign or influencer data');
       }
+
+      // First check if influencer's base fee exceeds campaign budget
+      if (campaign.budget && influencer.base_fee) {
+        if (parseFloat(influencer.base_fee) > parseFloat(campaign.budget)) {
+          const willProceed = window.confirm(
+            `Warning: This influencer's base fee ($${influencer.base_fee}) is above the campaign budget ($${campaign.budget}). Would you like to proceed anyway?`
+          );
+          
+          if (!willProceed) {
+            return;
+          }
+        }
+      }
+
+      const bookingData = {
+        influencer_id: influencer.id,
+        campaign_id: campaign.id
+      };
+
+      console.log("Sending booking data:", bookingData);
 
       const response = await fetch(`${config.API_URL}/api/bookings/create/`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({
-          influencer_id: influencer.id,
-          campaign_id: campaign.id
-        })
+        body: JSON.stringify(bookingData)
       });
 
+      const data = await response.json();
+      console.log("Booking response:", data);
+
       if (!response.ok) {
-        if (response.status === 401) {
-          navigate('/login');
-          return;
-        }
-        throw new Error('Failed to create booking');
+        throw new Error(data.error || 'Failed to create booking');
       }
 
-      // Refresh campaigns list after successful booking
+      alert('Booking created successfully! Waiting for admin approval.');
       await fetchCampaigns();
       setShowMatchModal(false);
-      alert('Booking created successfully!');
+
     } catch (err) {
       console.error('Error booking influencer:', err);
-      setError('Failed to book influencer. Please try again.');
+      alert(err.message || 'Failed to create booking. Please try again.');
     }
   };
 
@@ -598,22 +670,16 @@ const CampaignList = () => {
 
   // Add the Matching Modal component
   const MatchingModal = ({ campaign }) => (
-    <Modal 
-      show={showMatchModal} 
-      onHide={() => setShowMatchModal(false)}
-      size="lg"
-    >
+    <Modal show={showMatchModal} onHide={() => setShowMatchModal(false)} size="lg">
       <Modal.Header closeButton>
-        <Modal.Title>
-          Matching Influencers for {selectedCampaign?.name}
-        </Modal.Title>
+        <Modal.Title>Matching Influencers for {campaign?.name}</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         {isMatching ? (
-          <div className="text-center py-4">
-            <Spinner animation="border" role="status">
+          <div className="text-center py-5">
+            <div className="spinner-border text-primary" role="status">
               <span className="visually-hidden">Finding influencers...</span>
-            </Spinner>
+            </div>
           </div>
         ) : matchedInfluencers.length > 0 ? (
           <Row>
@@ -621,10 +687,10 @@ const CampaignList = () => {
               <Col md={6} key={influencer.id} className="mb-3">
                 <Card>
                   <Card.Body>
-                    <div className="d-flex justify-content-between align-items-center mb-2">
+                    <div className="d-flex justify-content-between align-items-start">
                       <div>
-                        <Card.Title className="mb-0">{influencer.name}</Card.Title>
-                        <Card.Subtitle className="text-muted">
+                        <Card.Title>{influencer.name}</Card.Title>
+                        <Card.Subtitle className="mb-2 text-muted">
                           {influencer.platform} • {influencer.followers_count.toLocaleString()} followers
                         </Card.Subtitle>
                       </div>
@@ -635,14 +701,22 @@ const CampaignList = () => {
                         {influencer.matchPercentage}% Match
                       </Badge>
                     </div>
-                    <Button 
-                      variant="primary" 
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => handleBookInfluencer(influencer, selectedCampaign)}
-                    >
-                      Book Now
-                    </Button>
+                    <div className="mt-2">
+                      <small className="text-muted">
+                        <strong>Region:</strong> {influencer.region}<br/>
+                        <strong>Niche:</strong> {influencer.niche}<br/>
+                        <strong>Base Fee:</strong> ${influencer.base_fee}
+                      </small>
+                    </div>
+                    <div className="mt-3">
+                      <Button 
+                        variant="primary" 
+                        size="sm"
+                        onClick={() => handleBookInfluencer(influencer, campaign)}
+                      >
+                        Book Now
+                      </Button>
+                    </div>
                   </Card.Body>
                 </Card>
               </Col>
@@ -819,22 +893,24 @@ const CampaignList = () => {
                     )}
                   </div>
 
-                  <div className="mt-3 d-flex justify-content-between">
-                    <Button
-                      variant="outline-primary"
-                      size="sm"
+                  <div className="mt-3">
+                    <Button 
+                      variant="outline-primary" 
+                      size="sm" 
+                      className="me-2"
                       onClick={() => handleViewDetails(campaign)}
                     >
                       View Details
                     </Button>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => handleFindInfluencers(campaign)}
-                      disabled={isMatching}
-                    >
-                      {isMatching ? 'Finding...' : 'Find Influencers'}
-                    </Button>
+                    {!campaign.is_assigned && (
+                      <Button 
+                        variant="outline-success" 
+                        size="sm"
+                        onClick={() => handleFindInfluencers(campaign)}
+                      >
+                        Find Influencers
+                      </Button>
+                    )}
                   </div>
                 </Card.Body>
               </Card>
@@ -845,174 +921,265 @@ const CampaignList = () => {
 
       {/* Create Campaign Modal */}
       <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>Create New Campaign</Modal.Title>
+        <Modal.Header closeButton className="bg-light">
+          <Modal.Title>
+            <div className="d-flex align-items-center">
+              <FaPlus className="text-primary me-2" />
+              Create New Campaign
+            </div>
+          </Modal.Title>
         </Modal.Header>
-        <Modal.Body>
+        <Modal.Body className="p-4">
           <Form onSubmit={handleCreateCampaign}>
-            <Form.Group className="mb-3">
-              <Form.Label>Campaign Name</Form.Label>
-              <Form.Control
-                type="text"
-                value={newCampaign.name}
-                onChange={(e) => setNewCampaign({...newCampaign, name: e.target.value})}
-                required
-                placeholder="Enter campaign name"
-              />
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-              <Form.Label>Campaign Objective</Form.Label>
-              <Form.Select
-                value={newCampaign.objective}
-                onChange={(e) => setNewCampaign({...newCampaign, objective: e.target.value})}
-                required
-              >
-                <option value="">Select an objective</option>
-                {CAMPAIGN_OBJECTIVES.map(objective => (
-                  <option key={objective} value={objective}>
-                    {objective}
-                  </option>
-                ))}
-              </Form.Select>
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-              <Form.Label>Industry</Form.Label>
-              <Form.Select
-                value={newCampaign.industry}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setNewCampaign({
-                    ...newCampaign, 
-                    industry: value,
-                    // Clear otherIndustry if not "Other"
-                    otherIndustry: value === 'Other' ? otherIndustry : ''
-                  });
-                }}
-                required
-              >
-                <option value="">Select an industry</option>
-                {INDUSTRIES.map(industry => (
-                  <option key={industry} value={industry}>
-                    {industry}
-                  </option>
-                ))}
-              </Form.Select>
-            </Form.Group>
-
-            {/* Show text input if "Other" is selected */}
-            {newCampaign.industry === 'Other' && (
-              <Form.Group className="mb-3">
-                <Form.Label>Specify Industry</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={otherIndustry}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setOtherIndustry(value);
-                    setNewCampaign({
-                      ...newCampaign,
-                      industry: `Other - ${value}`
-                    });
-                  }}
-                  required
-                  placeholder="Please specify your industry"
-                />
-              </Form.Group>
-            )}
-
-            <Form.Group className="mb-3">
-              <Form.Label>Platforms</Form.Label>
-              <Form.Select
-                multiple
-                value={newCampaign.platforms}
-                onChange={(e) => setNewCampaign({
-                  ...newCampaign, 
-                  platforms: Array.from(e.target.selectedOptions, option => option.value)
-                })}
-                required
-              >
-                <option value="Instagram">Instagram</option>
-                <option value="TikTok">TikTok</option>
-                <option value="YouTube">YouTube</option>
-                <option value="Twitter">Twitter</option>
-              </Form.Select>
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-              <Form.Label>Budget</Form.Label>
-              <Form.Control
-                type="number"
-                value={newCampaign.budget}
-                onChange={(e) => setNewCampaign({...newCampaign, budget: e.target.value})}
-                required
-              />
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-              <Form.Label>Target Demographics</Form.Label>
-              <Form.Select
-                value={newCampaign.demography}
-                onChange={(e) => setNewCampaign({...newCampaign, demography: e.target.value})}
-                required
-              >
-                <option value="13-17">13-17</option>
-                <option value="18-24">18-24</option>
-                <option value="25-34">25-34</option>
-                <option value="35-44">35-44</option>
-                <option value="45+">45+</option>
-              </Form.Select>
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-              <Form.Label>Target Region</Form.Label>
+            {/* Campaign Basic Info Section */}
+            <div className="mb-4">
+              <h5 className="mb-3 text-primary">Basic Information</h5>
               <Row>
                 <Col md={6}>
-                  <Form.Select
-                    className="mb-2"
-                    value={selectedCountry}
-                    onChange={(e) => {
-                      setSelectedCountry(e.target.value);
-                      setNewCampaign({
-                        ...newCampaign,
-                        region: e.target.value ? `All ${e.target.value}` : ''
-                      });
-                    }}
-                    required
-                  >
-                    <option value="">Select Country</option>
-                    {Object.keys(REGIONS).map(country => (
-                      <option key={country} value={country}>
-                        {country}
-                      </option>
-                    ))}
-                  </Form.Select>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Campaign Name</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={newCampaign.name}
+                      onChange={(e) => setNewCampaign({...newCampaign, name: e.target.value})}
+                      required
+                      placeholder="Enter campaign name"
+                      className="py-2"
+                    />
+                  </Form.Group>
                 </Col>
                 <Col md={6}>
-                  <Form.Select
-                    value={newCampaign.region}
-                    onChange={(e) => setNewCampaign({...newCampaign, region: e.target.value})}
-                    disabled={!selectedCountry}
-                    required
-                  >
-                    <option value="">Select Region</option>
-                    {selectedCountry && REGIONS[selectedCountry].map(region => (
-                      <option key={region} value={region}>
-                        {region}
-                      </option>
-                    ))}
-                  </Form.Select>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Industry</Form.Label>
+                    <Form.Select
+                      value={newCampaign.industry}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setNewCampaign({
+                          ...newCampaign, 
+                          industry: value,
+                          otherIndustry: value === 'Other' ? otherIndustry : ''
+                        });
+                      }}
+                      required
+                      className="py-2"
+                    >
+                      <option value="">Select an industry</option>
+                      {INDUSTRIES.map(industry => (
+                        <option key={industry} value={industry}>{industry}</option>
+                      ))}
+                    </Form.Select>
+                  </Form.Group>
                 </Col>
               </Row>
-            </Form.Group>
 
-            <div className="d-flex justify-content-end">
-              <Button variant="secondary" className="me-2" onClick={() => setShowCreateModal(false)}>
+              <Form.Group className="mb-3">
+                <Form.Label>Campaign Objective</Form.Label>
+                <Form.Select
+                  value={newCampaign.objective}
+                  onChange={(e) => setNewCampaign({...newCampaign, objective: e.target.value})}
+                  required
+                  className="py-2"
+                >
+                  <option value="">Select an objective</option>
+                  {CAMPAIGN_OBJECTIVES.map(objective => (
+                    <option key={objective} value={objective}>{objective}</option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+
+              <Form.Group className="mb-3">
+                <Form.Label>Campaign Brief</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={4}
+                  value={newCampaign.brief || ''}
+                  onChange={(e) => setNewCampaign({...newCampaign, brief: e.target.value})}
+                  placeholder="Provide additional context about your campaign, specific requirements, or any other details that would help influencers understand your goals."
+                  className="py-2"
+                />
+                <Form.Text className="text-muted">
+                  This information will be shared with influencers to help them create better content for your campaign.
+                </Form.Text>
+              </Form.Group>
+            </div>
+
+            {/* Target Audience Section */}
+            <div className="mb-4">
+              <h5 className="mb-3 text-primary">Target Audience</h5>
+              <Row>
+              
+                  <Form.Group className="mb-3">
+                    <Form.Label>Target Demographics</Form.Label>
+                    <div className="demographics-selector p-3 border rounded bg-light">
+                      {["13-17", "18-24", "25-34", "35-44", "45+"].map(age => (
+                        <Form.Check
+                          key={age}
+                          type="checkbox"
+                          id={`age-${age}`}
+                          label={`${age} years`}
+                          className="mb-2"
+                          checked={newCampaign.demographics?.includes(age)}
+                          onChange={(e) => {
+                            const updatedDemographics = e.target.checked
+                              ? [...(newCampaign.demographics || []), age]
+                              : (newCampaign.demographics || []).filter(d => d !== age);
+                            setNewCampaign({...newCampaign, demographics: updatedDemographics});
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </Form.Group>
+                
+                
+              </Row>
+            </div>
+
+            {/* Campaign Details Section */}
+            <div className="mb-4">
+              <h5 className="mb-3 text-primary">Campaign Details</h5>
+              <Row>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Platforms</Form.Label>
+                    <div className="platforms-selector p-3 border rounded bg-light">
+                      <div className="d-grid gap-2">
+                        {[
+                          { id: "Instagram", icon: <FaInstagram className="me-2" />, color: "#E1306C" },
+                          { id: "TikTok", icon: <FaTiktok className="me-2" />, color: "#000000" },
+                          { id: "YouTube", icon: <FaYoutube className="me-2" />, color: "#FF0000" },
+                          { id: "Twitter", icon: <FaTwitter className="me-2" />, color: "#1DA1F2" }
+                        ].map(platform => (
+                          <Button
+                            key={platform.id}
+                            variant={newCampaign.platforms.includes(platform.id) ? "primary" : "outline-primary"}
+                            className="text-start d-flex align-items-center"
+                            style={{
+                              backgroundColor: newCampaign.platforms.includes(platform.id) ? platform.color : 'white',
+                              borderColor: platform.color,
+                              color: newCampaign.platforms.includes(platform.id) ? 'white' : platform.color
+                            }}
+                            onClick={() => {
+                              const updatedPlatforms = newCampaign.platforms.includes(platform.id)
+                                ? newCampaign.platforms.filter(p => p !== platform.id)
+                                : [...newCampaign.platforms, platform.id];
+                              setNewCampaign({...newCampaign, platforms: updatedPlatforms});
+                            }}
+                          >
+                            {platform.icon} {platform.id}
+                            {newCampaign.platforms.includes(platform.id) && (
+                              <FaCheckCircle className="ms-auto" />
+                            )}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                    <Form.Text className="text-muted mt-2">
+                      Select one or more platforms for your campaign
+                    </Form.Text>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Campaign Budget</Form.Label>
+                    <InputGroup>
+                      <InputGroup.Text>$</InputGroup.Text>
+                      <Form.Control
+                        type="number"
+                        value={newCampaign.budget}
+                        onChange={(e) => setNewCampaign({...newCampaign, budget: e.target.value})}
+                        required
+                        placeholder="Enter campaign budget"
+                        className="py-2"
+                      />
+                    </InputGroup>
+                    <Form.Text className="text-muted">
+                      Enter your total budget for this campaign
+                    </Form.Text>
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Row className="mt-3">
+                <Col md={12}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Target Region</Form.Label>
+                    <Row>
+                      <Col md={6}>
+                        <Form.Select
+                          value={selectedCountry}
+                          onChange={(e) => {
+                            setSelectedCountry(e.target.value);
+                            setNewCampaign({...newCampaign, region: ''});
+                          }}
+                          required
+                          className="mb-2 py-2"
+                        >
+                          <option value="">Select Country</option>
+                          {Object.keys(REGIONS).map(country => (
+                            <option key={country} value={country}>{country}</option>
+                          ))}
+                        </Form.Select>
+                      </Col>
+                      <Col md={6}>
+                        <Form.Select
+                          value={newCampaign.region}
+                          onChange={(e) => setNewCampaign({...newCampaign, region: e.target.value})}
+                          required
+                          className="py-2"
+                          disabled={!selectedCountry}
+                        >
+                          <option value="">Select Region</option>
+                          {selectedCountry && REGIONS[selectedCountry].map(region => (
+                            <option key={region} value={region}>{region}</option>
+                          ))}
+                        </Form.Select>
+                      </Col>
+                    </Row>
+                    <Form.Text className="text-muted">
+                      Select the target country and region for your campaign
+                    </Form.Text>
+                  </Form.Group>
+                </Col>
+              </Row>
+            </div>
+
+            {formError && (
+              <Alert variant="danger" className="mt-3">
+                <strong>Error:</strong> 
+                {formError.includes('\n') ? (
+                  <ul className="mb-0 mt-2">
+                    {formError.split('\n').map((line, i) => (
+                      <li key={i}>{line}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span> {formError}</span>
+                )}
+              </Alert>
+            )}
+
+            <div className="d-flex justify-content-end mt-4">
+              <Button 
+                variant="outline-secondary" 
+                className="me-2" 
+                onClick={() => setShowCreateModal(false)}
+              >
                 Cancel
               </Button>
-              <Button variant="primary" type="submit">
-                Create Campaign
+              <Button 
+                variant="primary" 
+                type="submit"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Spinner as="span" animation="border" size="sm" className="me-2" />
+                    Creating Campaign...
+                  </>
+                ) : (
+                  'Create Campaign'
+                )}
               </Button>
             </div>
           </Form>

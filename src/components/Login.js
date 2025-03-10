@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Container, Form, Button, Alert, Card, Row, Col } from 'react-bootstrap';
+import { Container, Form, Button, Alert, Card, Row, Col, ToggleButton, ToggleButtonGroup } from 'react-bootstrap';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaSignInAlt, FaUser, FaLock, FaArrowRight } from 'react-icons/fa';
 import config from '../config';
@@ -8,7 +8,8 @@ const Login = ({ setIsAuthenticated }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: '',
-    password: ''
+    password: '',
+    role: 'client'  // Default role
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -23,24 +24,41 @@ const Login = ({ setIsAuthenticated }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          username: formData.username,
+          password: formData.password,
+          role: formData.role
+        })
       });
 
       const data = await response.json();
+      
+      if (!response.ok) {
+        // Handle specific error for role mismatch
+        if (response.status === 403) {
+          throw new Error(data.error || 'You cannot log in with this role. Please select the correct role.');
+        }
+        throw new Error(data.error || 'Login failed');
+      }
 
-      if (response.ok && data.token) {
+      if (data.token) {
         localStorage.setItem('token', data.token);
-        localStorage.setItem('userRole', data.role || 'user');
+        localStorage.setItem('userRole', data.role);
         setIsAuthenticated(true);
-        navigate('/dashboard/campaigns');
+        
+        // Redirect based on role
+        if (data.role === 'influencer') {
+          navigate('/influencer/dashboard');
+        } else {
+          navigate('/dashboard/campaigns');
+        }
       } else {
-        setError(data.error || 'Login failed. Please check your credentials.');
+        setError('Invalid response from server');
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError('Login failed. Please try again.');
+      setError(err.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -97,15 +115,41 @@ const Login = ({ setIsAuthenticated }) => {
                     </div>
                   </Form.Group>
 
+                  {/* Add role toggle */}
+                  <div className="mb-4 text-center">
+                    <ToggleButtonGroup
+                      type="radio"
+                      name="role"
+                      value={formData.role}
+                      onChange={(value) => setFormData({...formData, role: value})}
+                      className="w-100"
+                    >
+                      <ToggleButton
+                        id="client-role"
+                        value="client"
+                        variant={formData.role === 'client' ? 'primary' : 'outline-primary'}
+                        className="w-50"
+                      >
+                        Client/Brand
+                      </ToggleButton>
+                      <ToggleButton
+                        id="influencer-role"
+                        value="influencer"
+                        variant={formData.role === 'influencer' ? 'primary' : 'outline-primary'}
+                        className="w-50"
+                      >
+                        Influencer
+                      </ToggleButton>
+                    </ToggleButtonGroup>
+                  </div>
+
                   <Button 
                     variant="primary" 
                     type="submit" 
-                    className="w-100 mb-3 rounded-pill"
+                    className="w-100 rounded-pill"
                     disabled={loading}
                   >
-                    {loading ? (
-                      'Signing in...'
-                    ) : (
+                    {loading ? 'Signing in...' : (
                       <>
                         Sign In <FaArrowRight className="ms-2" />
                       </>

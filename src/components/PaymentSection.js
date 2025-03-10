@@ -55,8 +55,7 @@ const PaymentSection = () => {
       const response = await fetch(`${config.API_URL}/api/bookings/approved-pending-payment/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         }
       });
       
@@ -90,9 +89,8 @@ const PaymentSection = () => {
       const response = await fetch(`${config.API_URL}/api/payments/initiate/${selectedBooking.id}/`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
 

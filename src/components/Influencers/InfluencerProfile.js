@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Badge, ListGroup, Tab, Tabs } from 'react-bootstrap';
 import { FaInstagram, FaTiktok, FaYoutube, FaTwitter, FaUser, FaChartLine, FaHistory, FaExternalLinkAlt } from 'react-icons/fa';
+import config from '../../config';
 
 const InfluencerProfile = ({ influencerId }) => {
   const [profile, setProfile] = useState(null);
@@ -14,7 +15,7 @@ const InfluencerProfile = ({ influencerId }) => {
   const fetchInfluencerProfile = async () => {
     try {
       console.log('Fetching profile for influencer:', influencerId);
-      const response = await fetch(`http://127.0.0.1:8000/api/influencers/${influencerId}/profile/`);
+      const response = await fetch(`${config.API_URL}/api/influencers/${influencerId}/profile/`);
       const data = await response.json();
       console.log('Profile data received:', data);
       console.log('Social media URLs:', {

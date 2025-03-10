@@ -1,0 +1,93 @@
+.dashboard-stat-card {
+  transition: transform 0.2s;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.dashboard-stat-card:hover {
+  transform: translateY(-5px);
+}
+
+.stat-icon {
+  font-size: 24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background: rgba(0,0,0,0.05);
+}
+
+.activity-timeline {
+  position: relative;
+}
+
+.activity-item {
+  padding: 1rem;
+  border-left: 2px solid #e9ecef;
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.activity-item:before {
+  content: '';
+  position: absolute;
+  left: -7px;
+  top: 20px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #0d6efd;
+}
+
+.activity-content {
+  padding-left: 1rem;
+}
+
+.activity-content h6 {
+  margin-bottom: 0.25rem;
+}
+
+/* Table styling */
+.table > :not(caption) > * > * {
+  padding: 1rem;
+}
+
+.table tbody tr {
+  transition: background-color 0.2s;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(0,0,0,0.02);
+}
+
+/* Chart container */
+.chart-container {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .activity-timeline {
+    margin-top: 2rem;
+  }
+  
+  .table-responsive {
+    margin-top: 2rem;
+  }
+}
+
+/* Add this to your CSS file */
+.modal {
+  display: block !important;
+}
+
+.modal-backdrop {
+  opacity: 0.5 !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
+} 

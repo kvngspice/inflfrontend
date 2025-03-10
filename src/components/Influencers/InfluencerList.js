@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Row, Col, Card, Form, Button, Badge, Pagination, Dropdown, Modal, Collapse } from 'react-bootstrap';
-import { Link, useNavigate } from 'react-router-dom';
+import { Row, Col, Card, Form, Button, Badge, Pagination, Dropdown, Modal, Alert } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
 import { FaInstagram, FaTiktok, FaYoutube, FaTwitter, FaFilter, FaSort, FaStar, FaChartLine, FaExternalLinkAlt, FaUsers } from 'react-icons/fa';
 import InfluencerProfile from './InfluencerProfile';
+import ViewInfluencerProfile from './ViewInfluencerProfile';
 import './InfluencerList.css';
 import config from '../../config';
 
@@ -26,43 +27,38 @@ const InfluencerList = () => {
   const [selectedCampaign, setSelectedCampaign] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const navigate = useNavigate();
+  const [maxBudget, setMaxBudget] = useState('');
+  const [bookingError, setBookingError] = useState('');
+  const [showBudgetWarning, setShowBudgetWarning] = useState(false);
+  const [campaignBookings, setCampaignBookings] = useState({});
 
   useEffect(() => {
     fetchInfluencers();
     fetchCampaigns();
+    fetchExistingBookings();
   }, []);
 
   const fetchInfluencers = async () => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
       const response = await fetch(`${config.API_URL}/api/influencers/`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-
+      
       if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          navigate('/login');
-          return;
-        }
-        throw new Error('Failed to fetch influencers');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch influencers');
       }
-
+      
       const data = await response.json();
       setInfluencers(data);
-    } catch (err) {
-      console.error('Error fetching influencers:', err);
-      setError('Failed to load influencers. Please try again.');
+    } catch (error) {
+      console.error('Error fetching influencers:', error);
+      setError(error.message || 'Failed to fetch influencers');
     } finally {
       setLoading(false);
     }
@@ -70,23 +66,48 @@ const InfluencerList = () => {
 
   const fetchCampaigns = async () => {
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`${config.API_URL}/api/campaigns/`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error('Failed to fetch campaigns');
       }
       const data = await response.json();
       setCampaigns(data);
     } catch (err) {
       console.error('Error fetching campaigns:', err);
-      setError('Failed to load campaigns');
+      setError(err.message);
+    }
+  };
+
+  const fetchExistingBookings = async () => {
+    try {
+      const response = await fetch(`${config.API_URL}/api/bookings/`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch bookings');
+      }
+      
+      const data = await response.json();
+      
+      // Create a map of campaign_id -> [influencer_ids]
+      const bookingsMap = {};
+      data.forEach(booking => {
+        if (!bookingsMap[booking.campaign.id]) {
+          bookingsMap[booking.campaign.id] = [];
+        }
+        bookingsMap[booking.campaign.id].push(booking.influencer.id);
+      });
+      
+      setCampaignBookings(bookingsMap);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
     }
   };
 
@@ -102,10 +123,19 @@ const InfluencerList = () => {
   };
 
   const getProfileImage = (imageUrl, name) => {
+    console.log('Raw image URL received:', imageUrl); // Debug log
+
     if (!imageUrl) {
-      return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=200`;
     }
-    return imageUrl;
+
+    // Handle both relative and absolute URLs
+    const fullUrl = imageUrl.startsWith('http') 
+        ? imageUrl 
+        : `http://127.0.0.1:8000${imageUrl}`;
+    
+    console.log('Constructed image URL:', fullUrl); // Debug log
+    return fullUrl;
   };
 
   const filterInfluencers = useCallback(() => {
@@ -149,6 +179,13 @@ const InfluencerList = () => {
       );
     }
 
+    // Filter by maximum budget
+    if (maxBudget) {
+      results = results.filter(influencer => 
+        parseFloat(influencer.base_fee) <= parseFloat(maxBudget)
+      );
+    }
+
     // Sort results
     if (sortField) {
       results.sort((a, b) => {
@@ -169,7 +206,7 @@ const InfluencerList = () => {
     }
 
     return results;
-  }, [influencers, searchQuery, selectedPlatform, minFollowers, advancedFilters, sortField, sortDirection]);
+  }, [influencers, searchQuery, selectedPlatform, minFollowers, advancedFilters, sortField, sortDirection, maxBudget]);
 
   const filteredAndSortedInfluencers = useMemo(() => {
     let filtered = filterInfluencers();
@@ -185,43 +222,88 @@ const InfluencerList = () => {
 
   const handleBookNow = (influencer) => {
     setSelectedInfluencer(influencer);
+    setBookingError('');
     setShowBookingModal(true);
+  };
+
+  const handleCampaignSelect = (campaignId) => {
+    setSelectedCampaign(campaignId);
+    setBookingError('');
+    
+    // Check if influencer is already booked for this campaign
+    if (campaignBookings[campaignId]?.includes(selectedInfluencer.id)) {
+      setBookingError('This influencer is already booked for this campaign.');
+      return;
+    }
+    
+    // Check if influencer's base fee exceeds campaign budget
+    const selectedCampaignObj = campaigns.find(c => c.id.toString() === campaignId.toString());
+    if (selectedCampaignObj && selectedInfluencer.base_fee) {
+      const influencerFee = parseFloat(selectedInfluencer.base_fee);
+      const campaignBudget = parseFloat(selectedCampaignObj.budget);
+      
+      if (influencerFee > campaignBudget) {
+        setShowBudgetWarning(true);
+      } else {
+        setShowBudgetWarning(false);
+      }
+    }
   };
 
   const handleBookingSubmit = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
+      // Check if influencer is already booked for this campaign
+      if (campaignBookings[selectedCampaign]?.includes(selectedInfluencer.id)) {
+        setBookingError('This influencer is already booked for this campaign.');
         return;
       }
+      
+      // Log the data being sent
+      const bookingData = {
+        influencer_id: selectedInfluencer.id,
+        campaign_id: selectedCampaign
+      };
+      console.log('Sending booking request with data:', bookingData);
 
       const response = await fetch(`${config.API_URL}/api/bookings/create/`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({
-          influencer_id: selectedInfluencer.id,
-          campaign_id: selectedCampaign
-        })
+        body: JSON.stringify(bookingData)
       });
 
+      const data = await response.json();
+      console.log('Response from server:', data);
+
       if (!response.ok) {
-        if (response.status === 401) {
-          navigate('/login');
-          return;
-        }
-        throw new Error('Failed to create booking');
+        throw new Error(data.error || 'Failed to create booking');
       }
 
-      setShowBookingModal(false);
+      // Update local bookings state
+      setCampaignBookings(prev => {
+        const updated = { ...prev };
+        if (!updated[selectedCampaign]) {
+          updated[selectedCampaign] = [];
+        }
+        updated[selectedCampaign].push(selectedInfluencer.id);
+        return updated;
+      });
+
+      // Show success message
       alert('Booking created successfully!');
+      
+      // Close modal and reset state
+      setShowBookingModal(false);
+      setSelectedInfluencer(null);
+      setSelectedCampaign('');
+      setShowBudgetWarning(false);
+      setBookingError('');
+
     } catch (err) {
-      console.error('Error creating booking:', err);
-      setError('Failed to create booking. Please try again.');
+      console.error('Booking error:', err);
+      setBookingError(err.message || 'Failed to create booking. Please try again.');
     }
   };
 
@@ -280,35 +362,35 @@ const InfluencerList = () => {
       </div>
 
       <div className="filters-section mb-4">
-        <Row className="g-3">
+          <Row className="g-3">
           <Col xs={12} md={6} lg={3}>
-            <Form.Control
-              type="text"
+              <Form.Control
+                type="text"
               placeholder="Search by name, handle, or niche..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </Col>
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </Col>
           <Col xs={12} md={6} lg={3}>
-            <Form.Select
-              value={selectedPlatform}
-              onChange={(e) => setSelectedPlatform(e.target.value)}
-            >
-              <option value="">All Platforms</option>
+              <Form.Select
+                value={selectedPlatform}
+                onChange={(e) => setSelectedPlatform(e.target.value)}
+              >
+                <option value="">All Platforms</option>
               <option value="X">X (Twitter)</option>
               <option value="Instagram">Instagram</option>
               <option value="TikTok">TikTok</option>
               <option value="YouTube">YouTube</option>
-            </Form.Select>
-          </Col>
+              </Form.Select>
+            </Col>
           <Col xs={12} md={6} lg={3}>
-            <Form.Control
-              type="number"
-              placeholder="Min followers"
-              value={minFollowers}
-              onChange={(e) => setMinFollowers(e.target.value)}
-            />
-          </Col>
+              <Form.Control
+                type="number"
+                placeholder="Min followers"
+                value={minFollowers}
+                onChange={(e) => setMinFollowers(e.target.value)}
+              />
+            </Col>
           <Col xs={12} md={6} lg={3}>
             <Form.Select
               value={advancedFilters.location}
@@ -321,28 +403,39 @@ const InfluencerList = () => {
               <option value="South Africa">South Africa</option>
             </Form.Select>
           </Col>
+          <Col xs={12} md={6} lg={3}>
+            <Form.Group className="mb-3">
+              <Form.Label>Maximum Budget</Form.Label>
+              <Form.Control
+                type="number"
+                value={maxBudget}
+                onChange={(e) => setMaxBudget(e.target.value)}
+                placeholder="Enter maximum budget"
+              />
+            </Form.Group>
+          </Col>
         </Row>
 
         <Row className="mt-3">
           <Col xs={12} md={6} lg={4}>
-            <Dropdown>
-              <Dropdown.Toggle variant="outline-secondary" className="w-100">
-                <FaSort className="me-2" />Sort By
-              </Dropdown.Toggle>
-              <Dropdown.Menu>
-                <Dropdown.Item onClick={() => { setSortField('followers_count'); setSortDirection('desc'); }}>
-                  Followers (High to Low)
-                </Dropdown.Item>
-                <Dropdown.Item onClick={() => { setSortField('engagement_rate'); setSortDirection('desc'); }}>
-                  Engagement Rate (High to Low)
-                </Dropdown.Item>
-                <Dropdown.Item onClick={() => { setSortField('name'); setSortDirection('asc'); }}>
-                  Name (A-Z)
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-          </Col>
-        </Row>
+              <Dropdown>
+                <Dropdown.Toggle variant="outline-secondary" className="w-100">
+                  <FaSort className="me-2" />Sort By
+                </Dropdown.Toggle>
+                <Dropdown.Menu>
+                  <Dropdown.Item onClick={() => { setSortField('followers_count'); setSortDirection('desc'); }}>
+                    Followers (High to Low)
+                  </Dropdown.Item>
+                  <Dropdown.Item onClick={() => { setSortField('engagement_rate'); setSortDirection('desc'); }}>
+                    Engagement Rate (High to Low)
+                  </Dropdown.Item>
+                  <Dropdown.Item onClick={() => { setSortField('name'); setSortDirection('asc'); }}>
+                    Name (A-Z)
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+            </Col>
+          </Row>
       </div>
 
       <div className="d-flex justify-content-between align-items-center mb-3">
@@ -372,6 +465,7 @@ const InfluencerList = () => {
                     className="rounded-circle mb-2 mb-sm-0 me-sm-3"
                     style={{ width: '60px', height: '60px', objectFit: 'cover' }}
                     onError={(e) => {
+                      console.log('Image failed to load:', e.target.src);
                       e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(influencer.name)}&size=60`;
                     }}
                   />
@@ -454,9 +548,13 @@ const InfluencerList = () => {
         </Modal.Header>
         <Modal.Body>
           {selectedInfluencer && (
-            <InfluencerProfile 
+            <ViewInfluencerProfile 
               influencerId={selectedInfluencer.id} 
               onClose={() => setShowProfile(false)}
+              onBookNow={() => {
+                setShowProfile(false);
+                handleBookNow(selectedInfluencer);
+              }}
             />
           )}
         </Modal.Body>
@@ -470,21 +568,55 @@ const InfluencerList = () => {
           {selectedInfluencer && (
             <>
               <h5>{selectedInfluencer.name}</h5>
+              {selectedInfluencer.base_fee && (
+                <p className="text-muted">
+                  Base Fee: ${parseFloat(selectedInfluencer.base_fee).toLocaleString()}
+                </p>
+              )}
+              
+              {bookingError && (
+                <Alert variant="danger" className="mt-2 mb-3">
+                  {bookingError}
+                </Alert>
+              )}
+              
               <p>Select Campaign:</p>
               <Form.Select 
                 value={selectedCampaign}
-                onChange={(e) => setSelectedCampaign(e.target.value)}
+                onChange={(e) => handleCampaignSelect(e.target.value)}
                 required
               >
                 <option value="">Select a campaign</option>
-                {campaigns.map(campaign => (
-                  <option key={campaign.id} value={campaign.id}>
-                    {campaign.name} - {campaign.industry} ({campaign.budget})
-                  </option>
-                ))}
+                {campaigns.map(campaign => {
+                  const isAlreadyBooked = campaignBookings[campaign.id]?.includes(selectedInfluencer.id);
+                  return (
+                    <option 
+                      key={campaign.id} 
+                      value={campaign.id}
+                      disabled={isAlreadyBooked}
+                    >
+                      {campaign.name} - {campaign.industry} (${campaign.budget})
+                      {isAlreadyBooked ? ' - Already Booked' : ''}
+                    </option>
+                  );
+                })}
               </Form.Select>
+              
               {campaigns.length === 0 && (
                 <p className="text-muted mt-2">No campaigns available. Please create a campaign first.</p>
+              )}
+              
+              {showBudgetWarning && selectedCampaign && (
+                <Alert variant="warning" className="mt-3">
+                  <Alert.Heading>Budget Warning</Alert.Heading>
+                  <p>
+                    This influencer's base fee (${parseFloat(selectedInfluencer.base_fee).toLocaleString()}) 
+                    exceeds the campaign budget (${parseFloat(campaigns.find(c => c.id.toString() === selectedCampaign.toString()).budget).toLocaleString()}).
+                  </p>
+                  <p className="mb-0">
+                    Are you sure you want to proceed with this booking?
+                  </p>
+                </Alert>
               )}
             </>
           )}
@@ -496,14 +628,15 @@ const InfluencerList = () => {
           <Button 
             variant="primary" 
             onClick={handleBookingSubmit}
-            disabled={!selectedCampaign || campaigns.length === 0}
+            disabled={!selectedCampaign || campaigns.length === 0 || bookingError}
           >
-            Confirm Booking
+            {showBudgetWarning ? 'Book Anyway' : 'Confirm Booking'}
           </Button>
         </Modal.Footer>
       </Modal>
 
-      <style jsx>{`        .influencer-list {
+      <style jsx>{`
+        .influencer-list {
           padding: 15px;
         }
 
@@ -562,5 +695,4 @@ const InfluencerList = () => {
     </div>
   );
 };
-
 export default InfluencerList; 

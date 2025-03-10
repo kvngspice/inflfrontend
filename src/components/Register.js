@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Container, Form, Button, Alert, Card, Row, Col } from 'react-bootstrap';
 import { useNavigate, Link } from 'react-router-dom';
-import { FaUserPlus, FaEnvelope, FaLock, FaUser, FaBuilding, FaArrowRight } from 'react-icons/fa';
+import { FaUserPlus, FaEnvelope, FaLock, FaUser, FaBuilding, FaArrowRight, FaPhone } from 'react-icons/fa';
 import config from '../config';
 
 const Register = () => {
@@ -11,6 +11,7 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
+    phone: '',
     role: 'client'
   });
   const [error, setError] = useState('');
@@ -32,14 +33,8 @@ const Register = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
         },
-        body: JSON.stringify({
-          username: formData.username.trim(),
-          email: formData.email.trim(),
-          password: formData.password,
-          role: formData.role
-        })
+        body: JSON.stringify(formData)
       });
 
       const data = await response.json();
@@ -47,19 +42,10 @@ const Register = () => {
       if (response.ok) {
         navigate('/login');
       } else {
-        if (data.username) {
-          setError(`Username error: ${data.username.join(', ')}`);
-        } else if (data.email) {
-          setError(`Email error: ${data.email.join(', ')}`);
-        } else if (data.password) {
-          setError(`Password error: ${data.password.join(', ')}`);
-        } else {
-          setError(data.error || 'Registration failed. Please try again.');
-        }
+        setError(data.error || 'Registration failed');
       }
     } catch (err) {
-      console.error('Registration error:', err);
-      setError('Registration failed. Please check your connection and try again.');
+      setError('Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -119,6 +105,21 @@ const Register = () => {
                   <Form.Group className="mb-3">
                     <div className="input-group">
                       <span className="input-group-text bg-light border-0">
+                        <FaPhone className="text-muted" />
+                      </span>
+                      <Form.Control
+                        type="tel"
+                        placeholder="Phone number"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                        className="border-0 border-start"
+                      />
+                    </div>
+                  </Form.Group>
+
+                  <Form.Group className="mb-3">
+                    <div className="input-group">
+                      <span className="input-group-text bg-light border-0">
                         <FaLock className="text-muted" />
                       </span>
                       <Form.Control
@@ -149,19 +150,15 @@ const Register = () => {
                   </Form.Group>
 
                   <Form.Group className="mb-4">
-                    <div className="input-group">
-                      <span className="input-group-text bg-light border-0">
-                        <FaBuilding className="text-muted" />
-                      </span>
-                      <Form.Select
-                        value={formData.role}
-                        onChange={(e) => setFormData({...formData, role: e.target.value})}
-                        className="border-0 border-start"
-                      >
-                        <option value="client">Brand/Client</option>
-                        <option value="influencer">Influencer</option>
-                      </Form.Select>
-                    </div>
+                    <Form.Label>Register as</Form.Label>
+                    <Form.Select
+                      value={formData.role}
+                      onChange={(e) => setFormData({...formData, role: e.target.value})}
+                      className="form-control"
+                    >
+                      <option value="client">Brand/Client</option>
+                      <option value="influencer">Influencer</option>
+                    </Form.Select>
                   </Form.Group>
 
                   <Button 

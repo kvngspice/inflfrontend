@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Container, Row, Col, Card, Form, Button, Nav, Alert } from "react-bootstrap";
 import { FaUsers, FaBullhorn, FaTrash, FaPlus, FaCheckCircle } from "react-icons/fa";
-import { BrowserRouter as Router, Routes, Route, Link, Navigate, useNavigate} from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, Navigate, useNavigate} from "react-router-dom";
 import CampaignDetail from "./CampaignDetail"; // Import the new component
 import InfluencerDetail from "./InfluencerDetail";
 import BookingsPage from "./AdminDashboard";
@@ -21,6 +21,11 @@ import Login from './components/Login';
 import DashboardLayout from './components/DashboardLayout';
 import CampaignList from './components/Campaigns/CampaignList';
 import PaymentSection from './components/PaymentSection';
+import RoleBasedRoute from './components/RoleBasedRoute';
+import InfluencerProfileSetup from './components/Influencer/InfluencerProfileSetup';
+import InfluencerProfile from './components/Influencer/InfluencerProfile';
+import ApiTest from './components/ApiTest';
+import QuickInfluencerForm from './components/QuickInfluencerForm';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
@@ -695,9 +700,9 @@ function App() {
   }, []);
 
   return (
-    <Router>
+    <BrowserRouter>
           <Routes>
-        {/* Public Routes */}
+        {/* Public routes */}
         <Route path="/" element={<HomePage />} />
         <Route 
           path="/login" 
@@ -705,25 +710,43 @@ function App() {
         />
         <Route path="/register" element={<Register />} />
 
-        {/* Protected Routes */}
+        {/* Client/Brand routes */}
         <Route
           path="/dashboard/*"
           element={
-            isAuthenticated ? (
+            <RoleBasedRoute allowedRole="client">
               <DashboardLayout>
                 <Routes>
                   <Route path="campaigns" element={<CampaignList />} />
-                  <Route path="influencers" element={<InfluencerList campaigns={campaigns} onBookInfluencer={handleBookInfluencer} />} />
+                  <Route path="influencers" element={<InfluencerList />} />
                   <Route path="payments" element={<PaymentSection />} />
                 </Routes>
               </DashboardLayout>
-            ) : (
-              <Navigate to="/login" replace />
-            )
+            </RoleBasedRoute>
           }
         />
+
+        {/* Influencer routes */}
+        <Route
+          path="/influencer/*"
+          element={
+            <RoleBasedRoute allowedRole="influencer">
+              <DashboardLayout>
+                <Routes>
+                  <Route path="dashboard" element={<InfluencerDashboard />} />
+                  <Route path="profile" element={<InfluencerProfile />} />
+                  <Route path="complete-profile" element={<InfluencerProfileSetup standalone={true} />} />
+                </Routes>
+              </DashboardLayout>
+            </RoleBasedRoute>
+          }
+        />
+
+        {/* New route */}
+        <Route path="/api-test" element={<ApiTest />} />
+        <Route path="/quick-register" element={<QuickInfluencerForm />} />
           </Routes>
-    </Router>
+    </BrowserRouter>
   );
 }
 

@@ -5,7 +5,9 @@ import {
   FaUserPlus, FaSignInAlt, FaBullhorn, FaUsers, 
   FaChartLine, FaRocket, FaHandshake, FaGlobe 
 } from 'react-icons/fa';
-
+import viraloop from '../components/VIRALOOP.svg';
+import preview from '../preview.svg'
+import social from '../social media.svg'
 const HomePage = () => {
   return (
     <div className="homepage">
@@ -14,6 +16,11 @@ const HomePage = () => {
         <Container>
           <Row className="align-items-center min-vh-75">
             <Col lg={6} className="mb-5 mb-lg-0">
+            <img 
+       src={viraloop} 
+       alt="Platform Preview" 
+        style={{ width: "250px", height: "auto" }}/>
+
               <h1 className="display-4 fw-bold mb-4 animate-in">
                 Connect with Top Influencers
               </h1>
@@ -51,11 +58,20 @@ const HomePage = () => {
               </div>
             </Col>
             <Col lg={6} className="d-none d-lg-block">
-              <img 
-                src="/hero-image.png" 
-                alt="Platform Preview" 
-                className="img-fluid rounded-lg shadow-lg"
-              />
+              <div className="stacked-images-container">
+                <img 
+                  src={social} 
+                  alt="Social Media" 
+                  className="stacked-image social-image animate-social"
+                  style={{ width: "400px", height: "auto" }}
+                />
+                <img 
+                  src={preview} 
+                  alt="Platform Preview" 
+                  className="stacked-image preview-image"
+                  style={{ width: "400px", height: "auto" }}
+                />
+              </div>
             </Col>
           </Row>
         </Container>
@@ -175,6 +191,42 @@ const HomePage = () => {
           align-items: center;
         }
 
+        .stacked-images-container {
+          position: relative;
+          width: 450px;
+          height: 450px;
+          margin: 0 auto;
+        }
+
+        .stacked-image {
+          position: absolute;
+          transition: transform 0.3s ease;
+          box-shadow: 0 10px 20px rgba(0,0,0,0);
+          border-radius: 10px;
+        }
+
+        .social-image {
+          top: 0;
+          left: 0;
+          z-index: 2;
+          transform: rotate(-3deg);
+        }
+
+        .preview-image {
+          top: 20px;
+          left: 0px;
+          z-index: 1;
+          transform: rotate(5deg);
+        }
+
+        .stacked-images-container:hover .social-image {
+          transform: rotate(-8deg) translateY(-10px);
+        }
+
+        .stacked-images-container:hover .preview-image {
+          transform: rotate(8deg) translateY(10px);
+        }
+
         .animate-in {
           animation: fadeIn 1s ease-out;
         }
@@ -229,6 +281,21 @@ const HomePage = () => {
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-social {
+          animation: socialEntrance 1s ease-out forwards;
+        }
+
+        @keyframes socialEntrance {
+          from { 
+            opacity: 0; 
+            transform: translateY(-30px) rotate(0deg); 
+          }
+          to { 
+            opacity: 1; 
+            transform: translateY(0) rotate(-3deg); 
+          }
         }
       `}</style>
     </div>
