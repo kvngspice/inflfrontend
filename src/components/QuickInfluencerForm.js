@@ -132,6 +132,13 @@ const QuickInfluencerForm = () => {
     setLoading(true);
     setError('');
     
+    // Validate that at least one social platform has been added
+    if (formData.social_platforms.length === 0) {
+      setError('Please add at least one social media platform');
+      setLoading(false);
+      return;
+    }
+    
     try {
       // First save to database
       const dbResponse = await fetch(`${config.API_URL}/api/quick-add-influencer/`, {
@@ -302,8 +309,13 @@ const QuickInfluencerForm = () => {
                 <Card.Body>
                   <h5 className="mb-3">
                     <FaGlobe className="me-2 text-primary" />
-                    Social Media Platforms
+                    Social Media Platforms <span className="text-danger">*</span>
                   </h5>
+                  {formData.social_platforms.length === 0 && (
+                    <Alert variant="warning" className="mb-3">
+                      <small>Please add at least one social media platform</small>
+                    </Alert>
+                  )}
                   <Row>
                     <Col md={2}>
                       <Form.Group>
