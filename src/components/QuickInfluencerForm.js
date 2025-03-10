@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Container, Form, Button, Alert, Card, Row, Col, Badge } from 'react-bootstrap';
 import { FaInstagram, FaTiktok, FaYoutube, FaTwitter, FaExternalLinkAlt, FaMoneyBillWave, FaUserPlus, FaGlobe, FaCheckCircle } from 'react-icons/fa';
 import viraloop from '../components/VIRALOOP.svg';
+import config from '../config';
 
 const REGIONS = {
   'Nigeria': [
@@ -131,9 +132,16 @@ const QuickInfluencerForm = () => {
     setLoading(true);
     setError('');
     
+    // Validate that at least one social platform has been added
+    if (formData.social_platforms.length === 0) {
+      setError('Please add at least one social media platform');
+      setLoading(false);
+      return;
+    }
+    
     try {
       // First save to database
-      const dbResponse = await fetch('http://127.0.0.1:8000/api/quick-add-influencer/', {
+      const dbResponse = await fetch(`${config.API_URL}/api/quick-add-influencer/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
