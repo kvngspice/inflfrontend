@@ -301,8 +301,13 @@ const QuickInfluencerForm = () => {
                 <Card.Body>
                   <h5 className="mb-3">
                     <FaGlobe className="me-2 text-primary" />
-                    Social Media Platforms
+                    Social Media Platforms <span className="text-danger">*</span>
                   </h5>
+                  {formData.social_platforms.length === 0 && (
+                    <Alert variant="warning" className="mb-3">
+                      <small>Please add at least one social media platform</small>
+                    </Alert>
+                  )}
                   <Row>
                     <Col md={2}>
                       <Form.Group>
