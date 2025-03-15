@@ -11,9 +11,22 @@ const ViewInfluencerProfile = ({ influencerId, onClose }) => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        console.log(`Fetching profile for influencer ID: ${influencerId} from ${config.API_URL}/api/influencers/${influencerId}/profile/`);
+        // Try with a different URL format
+        const apiUrl = `${config.API_URL}/api/influencers/${influencerId}/profile/`;
+        console.log(`Attempting to fetch from: ${apiUrl}`);
         
-        const response = await fetch(`${config.API_URL}/api/influencers/${influencerId}/profile/`);
+        // Add a timeout to the fetch to avoid long waiting times
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        const response = await fetch(apiUrl, {
+          signal: controller.signal,
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        clearTimeout(timeoutId);
         
         if (!response.ok) {
           const errorText = await response.text();
@@ -25,8 +38,13 @@ const ViewInfluencerProfile = ({ influencerId, onClose }) => {
         console.log('Profile data received:', data);
         setProfile(data);
       } catch (err) {
-        console.error('Error fetching profile:', err);
-        setError(err.message || 'Failed to load influencer profile');
+        if (err.name === 'AbortError') {
+          console.error('Request timed out');
+          setError('Request timed out. The server might be down or unreachable.');
+        } else {
+          console.error('Error fetching profile:', err);
+          setError(err.message || 'Failed to load influencer profile');
+        }
       } finally {
         setLoading(false);
       }
